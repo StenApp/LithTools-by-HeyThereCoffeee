@@ -1,0 +1,13 @@
+[remap]
+
+importer="lithtech.abc.import"
+type="PackedScene"
+path="res://.import/WORKGUARD_ACTION.ABC-12a833b30ff3fa0731993d4638e6c717.tscn"
+
+[deps]
+
+source_file="res://Meshes/WORKGUARD_ACTION.ABC"
+dest_files=[ "res://.import/WORKGUARD_ACTION.ABC-12a833b30ff3fa0731993d4638e6c717.tscn" ]
+
+[params]
+
