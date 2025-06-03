@@ -293,6 +293,98 @@ func opq_to_uv(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, normal: Vect
 	return Vector2(u, v)
 # End Func
 
+func generate_uvs_from_plane_normal(vertex_pos: Vector3, plane_normal: Vector3, texture_scale: float = 1.0) -> Vector2:
+	"""
+	Generate texture coordinates based on plane normal direction.
+	This ensures consistent, predictable texture mapping regardless of OPQ issues.
+	"""
+	var abs_normal = plane_normal.abs()
+	var uv: Vector2
+	
+	# Scale down large coordinates to prevent extreme UV values
+	var scaled_pos = vertex_pos * 0.01  # Scale down world coordinates
+	
+	# Find the dominant axis (which component is largest)
+	if abs_normal.y > abs_normal.x and abs_normal.y > abs_normal.z:
+		# Y-dominant (floor/ceiling)
+		if plane_normal.y > 0:
+			# Ceiling: looking down at floor
+			uv = Vector2(scaled_pos.x, -scaled_pos.z) * texture_scale
+		else:
+			# Floor: looking up at ceiling  
+			uv = Vector2(scaled_pos.x, scaled_pos.z) * texture_scale
+			
+	elif abs_normal.x > abs_normal.z:
+		# X-dominant (left/right walls)
+		if plane_normal.x > 0:
+			# Right wall: facing -X
+			uv = Vector2(-scaled_pos.z, scaled_pos.y) * texture_scale
+		else:
+			# Left wall: facing +X
+			uv = Vector2(scaled_pos.z, scaled_pos.y) * texture_scale
+			
+	else:
+		# Z-dominant (front/back walls)
+		if plane_normal.z > 0:
+			# Front wall: facing -Z
+			uv = Vector2(-scaled_pos.x, scaled_pos.y) * texture_scale
+		else:
+			# Back wall: facing +Z
+			uv = Vector2(scaled_pos.x, scaled_pos.y) * texture_scale
+	
+	return uv
+
+
+func generate_uvs_from_plane_normal_with_poly_params(vertex_pos: Vector3, plane_normal: Vector3, poly) -> Vector2:
+	"""
+	Generate texture coordinates using plane normal and polygon-specific texture parameters.
+	Uses the polygon's Unknown2/Unknown3 values as texture scaling factors.
+	"""
+	var abs_normal = plane_normal.abs()
+	var uv: Vector2
+	
+	# Use polygon-specific texture scaling from Unknown2/Unknown3
+	# These appear to be texture coordinate scaling factors
+	var u_scale = 1.0 / 64.0  # Default scale
+	var v_scale = 1.0 / 64.0  # Default scale
+	
+	# Try to extract texture parameters from polygon unknowns
+	# Check if the polygon object has these properties
+	if "unknown2" in poly and poly.unknown2 != 0:
+		u_scale = 1.0 / poly.unknown2  # Inverse because larger values = smaller UVs
+	if "unknown3" in poly and poly.unknown3 != 0:
+		v_scale = 1.0 / poly.unknown3
+	
+	# Find the dominant axis (which component is largest)
+	if abs_normal.y > abs_normal.x and abs_normal.y > abs_normal.z:
+		# Y-dominant (floor/ceiling)
+		if plane_normal.y > 0:
+			# Ceiling: looking down at floor
+			uv = Vector2(vertex_pos.x * u_scale, -vertex_pos.z * v_scale)
+		else:
+			# Floor: looking up at ceiling  
+			uv = Vector2(vertex_pos.x * u_scale, vertex_pos.z * v_scale)
+			
+	elif abs_normal.x > abs_normal.z:
+		# X-dominant (left/right walls)
+		if plane_normal.x > 0:
+			# Right wall: facing -X
+			uv = Vector2(-vertex_pos.z * u_scale, vertex_pos.y * v_scale)
+		else:
+			# Left wall: facing +X
+			uv = Vector2(vertex_pos.z * u_scale, vertex_pos.y * v_scale)
+			
+	else:
+		# Z-dominant (front/back walls)
+		if plane_normal.z > 0:
+			# Front wall: facing -Z
+			uv = Vector2(-vertex_pos.x * u_scale, vertex_pos.y * v_scale)
+		else:
+			# Back wall: facing +Z
+			uv = Vector2(vertex_pos.x * u_scale, vertex_pos.y * v_scale)
+	
+	return uv
+
 func get_vert_uv( vert : Vector3, poly_u : Vector3, poly_v : Vector3, lm_width, lm_height ):
 	#return Vector2( vert.dot(poly_u), vert.dot(poly_v) )
 	return Vector2( vert.dot(poly_u) / (lm_width), vert.dot(poly_v) / (lm_height) )
@@ -656,19 +748,12 @@ func fill_array_mesh(model, world_models = []):
 				
 				var vert = world_model.points[disk_vert.vertex_index]
 				
-				var uv1 = Vector2()
-				var uv2 = Vector2()
-				var uv3 = Vector2()
+				# Use the surface's UV vectors (OPQ) - these are the correct projection vectors
+				# (surface is already defined: var surface = world_model.surfaces[poly.surface_index])
+				var O = surface.uv1  # Origin point
+				var P = surface.uv2  # P vector (texture U direction)
+				var Q = surface.uv3  # Q vector (texture V direction)
 				
-				if model.PLATFORM == "PC" and model.is_lithtech_1() or model.is_lithtech_2():
-					uv1 = surface.uv1
-					uv2 = surface.uv2
-					uv3 = surface.uv3
-				else:
-					uv1 = poly.uv1
-					uv2 = poly.uv2
-					uv3 = poly.uv3
-
 				#var vcolour = Color( lm_colours.r[disk_vert_index], lm_colours.g[disk_vert_index], lm_colours.b[disk_vert_index] )
 				
 				verts.append(vert)
@@ -683,16 +768,26 @@ func fill_array_mesh(model, world_models = []):
 					colours.append(colour)
 				# End If
 				
-				# Calculate the surface normal
-				var poly_plane
-				if model.is_lithtech_1():
-					poly_plane = world_model.planes[surface.unknown]
-				else:
-					poly_plane = world_model.planes[poly.plane_index]
-				var normal = poly_plane.normal
+				var normal = plane.normal
 				
-				var uv = opq_to_uv(vert, uv1, uv2, uv3, normal, tex_width, tex_height)
+				# Debug: Let's see what properties the polygon actually has
+				if poly_index < 3:
+					print("Poly ", poly_index, " properties: ")
+					for prop in poly.get_property_list():
+						if prop.name != "RefCounted" and not prop.name.begins_with("_"):
+							print("  ", prop.name, ": ", poly.get(prop.name))
+				
+				# NEW: Use simple plane-based UV generation with better scaling
+				var texture_scale = 1.0 / 256.0  # Even larger textures to reduce tiling
+				var uv = generate_uvs_from_plane_normal(vert, normal, texture_scale)
+				
+				# Check if UV seems reasonable (lower threshold since we adjusted scale)
+				if abs(uv.x) > 10.0 or abs(uv.y) > 10.0:
+					print("Plane UV gave extreme values (", uv, "), falling back to OPQ")
+					uv = opq_to_uv(vert, O, P, Q, normal, tex_width, tex_height)
+				
 				uvs.append(uv)
+				
 			# End For
 			
 			# Start UV 2
