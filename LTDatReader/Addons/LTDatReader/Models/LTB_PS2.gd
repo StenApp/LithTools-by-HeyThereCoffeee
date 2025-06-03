@@ -444,6 +444,10 @@ class LTB_PS2:
 		var lightmap_width = 0
 		var lightmap_height = 0
 		
+		var unknown1 = 0      # The first unknown int
+		var unknown2 = 0      # Texture U scale/offset parameter  
+		var unknown3 = 0      # Texture V scale/offset parameter
+		
 		var unknown_flag = 0
 		var unknown_list = []
 		
@@ -472,12 +476,13 @@ class LTB_PS2:
 			self.lightmap_width = f.get_8()
 			self.lightmap_height = f.get_8()
 			
-			var unknown_2 = f.get_8()
-			var unknown_3 = f.get_8()
+			self.unknown2 = f.get_8()  # Store Unknown2 (texture U scale)
+			self.unknown3 = f.get_8()  # Store Unknown3 (texture V scale)
 			
 			self.surface_index = f.get_32()
 			self.plane_index = f.get_32()
 			#var polygon_index = f.get_32()
+			
 			
 			self.uv_offset_1 = f.get_float()
 			
