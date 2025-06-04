@@ -749,45 +749,74 @@ func fill_array_mesh(model, world_models = []):
 				var vert = world_model.points[disk_vert.vertex_index]
 				
 				# Use the surface's UV vectors (OPQ) - these are the correct projection vectors
-				# (surface is already defined: var surface = world_model.surfaces[poly.surface_index])
+				surface = world_model.surfaces[poly.surface_index]
 				var O = surface.uv1  # Origin point
 				var P = surface.uv2  # P vector (texture U direction)
 				var Q = surface.uv3  # Q vector (texture V direction)
-				
-				#var vcolour = Color( lm_colours.r[disk_vert_index], lm_colours.g[disk_vert_index], lm_colours.b[disk_vert_index] )
 				
 				verts.append(vert)
 				normals.append(plane.normal)
 				
 				if model.is_lithtech_1():
-					#var normalized = surface.colour * ( 1.0 / 255.0 )
 					var normalized = disk_vert.colour * ( 1.0 / 255.0 )
-					
 					var colour = Color(normalized.x, normalized.y, normalized.z, 1.0)
-					
 					colours.append(colour)
 				# End If
 				
-				var normal = plane.normal
+				# === COMPLETE FIX: Polygon center + vector correction ===
 				
-				# Debug: Let's see what properties the polygon actually has
-				if poly_index < 3:
-					print("Poly ", poly_index, " properties: ")
-					for prop in poly.get_property_list():
-						if prop.name != "RefCounted" and not prop.name.begins_with("_"):
-							print("  ", prop.name, ": ", poly.get(prop.name))
+				# Step 1: Get polygon center for coordinate system correction
+				var polygon_center = Vector3(poly.center.x, poly.center.y, poly.center.z)
 				
-				# NEW: Use simple plane-based UV generation with better scaling
-				var texture_scale = 1.0 / 256.0  # Even larger textures to reduce tiling
-				var uv = generate_uvs_from_plane_normal(vert, normal, texture_scale)
+				# Step 2: Make O vector relative to polygon center
+				var corrected_O = O - polygon_center
 				
-				# Check if UV seems reasonable (lower threshold since we adjusted scale)
-				if abs(uv.x) > 10.0 or abs(uv.y) > 10.0:
-					print("Plane UV gave extreme values (", uv, "), falling back to OPQ")
-					uv = opq_to_uv(vert, O, P, Q, normal, tex_width, tex_height)
+				# Step 3: Fix P and Q vectors if they're not perpendicular to surface normal
+				var corrected_P = P
+				var corrected_Q = Q
 				
-				uvs.append(uv)
+				# Fix P vector if not perpendicular to normal
+				var p_normal_dot = P.dot(plane.normal)
+				if abs(p_normal_dot) > 0.1:
+					corrected_P = plane.normal.cross(Q).normalized() * P.length()
+					if disk_vert_index == 0:
+						print("Fixed P vector from ", P, " to ", corrected_P)
 				
+				# Fix Q vector if not perpendicular to normal  
+				var q_normal_dot = Q.dot(plane.normal)
+				if abs(q_normal_dot) > 0.1:
+					corrected_Q = corrected_P.cross(plane.normal).normalized() * Q.length()
+					if disk_vert_index == 0:
+						print("Fixed Q vector from ", Q, " to ", corrected_Q)
+				
+				# Step 4: Calculate point in polygon-local space
+				var point = (vert - polygon_center) - corrected_O
+				
+				# Step 5: Calculate UV using corrected vectors
+				var raw_uv = Vector2(point.dot(corrected_P), point.dot(corrected_Q))
+				
+				# DEBUG: Check vector relationships (only for first vertex to avoid spam)
+				if disk_vert_index == 0:
+					print("=== COMPLETE UV DEBUG ===")
+					print("Original P: ", P, " → Corrected P: ", corrected_P)
+					print("Original Q: ", Q, " → Corrected Q: ", corrected_Q)
+					print("Plane normal: ", plane.normal)
+					print("Polygon center: ", polygon_center)
+					print("Corrected O: ", corrected_O)
+					
+					# Check corrected vectors
+					var pq_dot = corrected_P.dot(corrected_Q)
+					var p_norm_dot = corrected_P.dot(plane.normal)
+					var q_norm_dot = corrected_Q.dot(plane.normal)
+					
+					print("Corrected P·Q: ", pq_dot, " (should be ~0)")
+					print("Corrected P·Normal: ", p_norm_dot, " (should be ~0)")
+					print("Corrected Q·Normal: ", q_norm_dot, " (should be ~0)")
+					print("Raw UV: ", raw_uv)
+				
+				# Step 6: Normalize by texture dimensions
+				var final_uv = Vector2(raw_uv.x / tex_width, raw_uv.y / tex_height)
+				uvs.append(final_uv)
 			# End For
 			
 			# Start UV 2
