@@ -94,18 +94,6 @@ func _input(event):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 func _process(delta):
 	_update_mouselook()
 	_update_movement(delta)

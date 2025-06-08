@@ -1,8 +1,6 @@
 extends Node
 
 
-
-
 signal on_file_okay(path)
 
 var file_dialog = FileDialog.new()
@@ -71,7 +69,7 @@ func on_file_selected_for_export_to_png(path):
 	var image = self.loaded_file.raw_data as ImageTexture
 	
 	if image.get_data().save_png(path) == OK:
-		print("Exported as png to: %s" % path)
+		print("Exported as png to: " + path)
 	else:
 		print("Failed to save as png :(")
 	

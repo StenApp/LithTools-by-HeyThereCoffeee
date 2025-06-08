@@ -255,10 +255,10 @@ class GLTFExporter:
 					
 					
 					
-					var tex_name = "%s.png" % mesh.name
+					var tex_name = mesh.name + ".png"
 					
 					if main_tex != null:
-						main_tex.get_data().save_png("./export/%s" % tex_name)
+						main_tex.get_data().save_png("./export/" + tex_name)
 					if lm_tex != null:
 						lm_tex.get_data().save_png("./export/lm_tex.png")
 						
@@ -278,7 +278,7 @@ class GLTFExporter:
 					self.gltf["materials"].append({
 						"doubleSided": false, 
 						
-						"name": "%s - Material" % mesh.name, 
+						"name": mesh.name + " - Material", 
 						"pbrMetallicRoughness": {
 							"baseColorFactor": [1.0, 1.0, 1.0, 1.0], 
 							"baseColorTexture": {

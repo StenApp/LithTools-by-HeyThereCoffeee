@@ -29,7 +29,8 @@ func set_opened_file(value):
 	if value == "":
 		OS.set_window_title("LithTools")
 	else:
-		OS.set_window_title("LithTools - %s" % self.opened_file)
+		# Change this line:
+		OS.set_window_title("LithTools - " + self.opened_file)
 
 
 func set_file_mode(value):
