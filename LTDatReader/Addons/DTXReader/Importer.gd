@@ -31,7 +31,7 @@ func get_option_visibility(option, options):
 var _texture_builder = null
 
 func _init():
-	var path = "%s/TextureBuilder.gd" % self.get_script().get_path().get_base_dir()
+	var path = self.get_script().get_path().get_base_dir() + "/TextureBuilder.gd"
 	self._texture_builder = load(path).new()
 	
 func import(source_file, save_path, options, platform_variants, gen_files):

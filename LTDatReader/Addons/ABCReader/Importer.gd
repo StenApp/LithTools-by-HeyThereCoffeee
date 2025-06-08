@@ -31,7 +31,7 @@ func get_option_visibility(option, options):
 var _model_builder = null
 
 func _init():
-	var path = "%s/ModelBuilder.gd" % self.get_script().get_path().get_base_dir()
+	var path = self.get_script().get_path().get_base_dir() + "/ModelBuilder.gd"
 	self._model_builder = load(path).new()
 	
 

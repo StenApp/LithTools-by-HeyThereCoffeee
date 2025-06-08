@@ -4,7 +4,7 @@ extends EditorPlugin
 var import_plugin
 
 func _enter_tree():
-	var path = "%s/Importer.gd" % self.get_script().get_path().get_base_dir()
+	var path = self.get_script().get_path().get_base_dir() + "/Importer.gd"
 	import_plugin = load(path).new()
 	add_import_plugin(import_plugin)
 

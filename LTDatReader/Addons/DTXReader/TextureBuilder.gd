@@ -3,12 +3,12 @@ extends Node
 func build(source_file, options):
 	var file = File.new()
 	if file.open(source_file, File.READ) != OK:
-		print("Failed to open %s" % source_file)
+		print("Failed to open " + source_file)
 		return null
 		
-	print("Opened %s" % source_file)
+	print("Opened " + source_file)
 	
-	var path = "%s/Models/DTX.gd" % self.get_script().get_path().get_base_dir()
+	var path = self.get_script().get_path().get_base_dir() + "/Models/DTX.gd"
 	var dtx_file = load(path)
 	
 	# Model as in MVC model, not mesh model!
@@ -19,7 +19,7 @@ func build(source_file, options):
 	file.close()
 	
 	if response.code == model.IMPORT_RETURN.ERROR:
-		print("IMPORT ERROR: %s" % response.message)
+		print("IMPORT ERROR: " + str(response.message))
 		return null
 		
 	var texture = ImageTexture.new()

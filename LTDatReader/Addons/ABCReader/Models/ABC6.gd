@@ -48,10 +48,10 @@ class ABC:
 			
 			if section_name == 'Header':
 				var version_text = self.read_string(f)
-				print("ABC Version: %s" % version_text)
+				print("ABC Version: " + version_text)
 				
 				if version_text != self.version_constant:
-					return self._make_response(IMPORT_RETURN.ERROR, 'Unsupported file version (%d)' % version_text)
+					return self._make_response(IMPORT_RETURN.ERROR, 'Unsupported file version (' + str(version_text) + ')')
 				# End If
 					
 				self.version = 6
@@ -97,7 +97,7 @@ class ABC:
 				break
 			# End If
 			
-			print("Finished %s\n -> Next section at %d" % [section_name, next_section_offset])
+			print("Finished " + section_name + "\n -> Next section at " + str(next_section_offset))
 			
 		# End While
 		

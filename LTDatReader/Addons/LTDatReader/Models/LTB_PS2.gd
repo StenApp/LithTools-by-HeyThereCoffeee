@@ -64,10 +64,10 @@ class LTB_PS2:
 		
 		self.version = f.get_32()
 		
-		print("LTB_PS2 Version: %d" % self.version)
+		print("LTB_PS2 Version: " + str(self.version))
 				
 		if [LTB_PS2_VERSION_NOLF].has(self.version) == false:
-			return self._make_response(IMPORT_RETURN.ERROR, 'Unsupported file version (%d)' % self.version)
+			return self._make_response(IMPORT_RETURN.ERROR, 'Unsupported file version (' + str(self.version) + ')')
 				
 		
 		self.object_data_pos = f.get_32()

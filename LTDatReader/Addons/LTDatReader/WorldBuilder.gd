@@ -21,10 +21,10 @@ func chunk(array, by):
 func build(source_file, options):
 	var file = File.new()
 	if file.open(source_file, File.READ) != OK:
-		print("Failed to open %s" % source_file)
+		print("Failed to open " + source_file)
 		return FAILED
 		
-	print("Opened %s" % source_file)
+	print("Opened " + source_file)
 	
 	var dat_file = load("res://Addons/LTDatReader/Models/DAT.gd")
 	var ltb_file = load("res://Addons/LTDatReader/Models/LTB_PS2.gd")
@@ -50,7 +50,7 @@ func build(source_file, options):
 	# Batched reading
 	var response = model.read(file, true)
 	if response.code == model.IMPORT_RETURN.ERROR:
-		print("IMPORT ERROR: %s" % response.message)
+		print("IMPORT ERROR: " + str(response.message))
 		return FAILED
 		
 	# Hack: Load up some config values
@@ -63,7 +63,7 @@ func build(source_file, options):
 	var export_to_lta = false
 	
 	if err == OK:
-		var game_path_string = "%s_v%d_game_path" % [ file_extension, model.version ]
+		var game_path_string = file_extension + "_v" + str(model.version) + "_game_path"
 		texture_path = config.get_value("Worlds", game_path_string, texture_path)
 		export_to_lta = config.get_value("Worlds", "export_to_lta_on_load", false)
 		
@@ -231,7 +231,7 @@ func build(source_file, options):
 	# Pack our scene!
 	scene.pack(root)
 	
-	print("Total Meshes Generated: %d" % total_mesh_count)
+	print("Total Meshes Generated: " + str(total_mesh_count))
 	
 	if export_to_lta:
 		var writer = lta_writer.LTAWriter.new()
@@ -239,7 +239,7 @@ func build(source_file, options):
 		var out_path = source_file.replacen(".ltb", ".lta")
 		out_path = source_file.replacen(".dat", ".lta")
 
-		print("Exporting LTA to %s" % out_path)
+		print("Exporting LTA to " + out_path)
 
 		writer.write(model, out_path, 2)
 
@@ -258,7 +258,7 @@ func get_texture(tex_name):
 	# End If
 	
 	# Not cached, so grab it and cache it
-	var tex = dtx_reader.build("%s%s" % [texture_path, tex_name], [])
+	var tex = dtx_reader.build(texture_path + tex_name, [])
 	cached_textures[tex_name] = tex
 	return tex
 # End Func
@@ -499,7 +499,7 @@ func build_array_mesh_jupiter(textured_meshes):
 		st.clear()
 		st.begin(Mesh.PRIMITIVE_TRIANGLES)
 		texture_references.append(texture)
-		mesh_names.append("Render Data - %s" % texture)
+		mesh_names.append("Render Data - " + texture)
 	# End For
 	
 	return [ meshes, mesh_names, texture_references ]
@@ -646,7 +646,7 @@ func fill_array_mesh(model, world_models = []):
 		
 		# Skip the physics mesh
 		if world_model.world_name == "VisBSP":# or world_model.world_name == "PhysicsBSP":
-			print("Skipping %s" % world_model.world_name)
+			print("Skipping " + world_model.world_name)
 			continue
 
 		#print("Processing %s" % world_model.world_name)

@@ -6,17 +6,17 @@ var cheat_skeleton := Skeleton.new()
 func build(source_file, options):
 	var file = File.new()
 	if file.open(source_file, File.READ) != OK:
-		print("Failed to open %s" % source_file)
+		print("Failed to open " + source_file)
 		return FAILED
 		
-	print("Opened %s" % source_file)
+	print("Opened " + source_file)
 	
-	var path = "%s/Models" % self.get_script().get_path().get_base_dir()
-	var abc_file = load("%s/ABC.gd" % path)
-	var abc6_file = load("%s/ABC6.gd" % path)
+	var path = self.get_script().get_path().get_base_dir() + "/Models"
+	var abc_file = load(path + "/ABC.gd")
+	var abc6_file = load(path + "/ABC6.gd")
 	
 	# Our helper script
-	var abc_helper_script = load("%s/ABCHelper.gd" % self.get_script().get_path().get_base_dir())
+	var abc_helper_script = load(self.get_script().get_path().get_base_dir() + "/ABCHelper.gd")
 	
 	var model = abc_file.ABC.new()
 	
@@ -30,7 +30,7 @@ func build(source_file, options):
 		#...nope, we're ded.
 		if response.code == model.IMPORT_RETURN.ERROR:
 			file.close()
-			print("IMPORT ERROR: %s" % response.message)
+			print("IMPORT ERROR: " + str(response.message))
 			return FAILED
 		
 		
@@ -173,7 +173,7 @@ func build_skeleton(model, skeleton : Skeleton):
 	for i in range(model.node_count):
 		var lt_node = model.nodes[i]
 		var bind_matrix = lt_node.bind_matrix
-		#print("Node %s\n - Index: %d\n - Flags: %d\n - Bind Matrix: ( (%f/%f/%f), (%f/%f/%f), (%f/%f/%f), (%f/%f/%f) )\n - Child Count: %d" % [lt_node.name, lt_node.index, lt_node.flags, lt_node.bind_matrix[0].x, lt_node.bind_matrix[0].y, lt_node.bind_matrix[0].z, lt_node.bind_matrix[1].x, lt_node.bind_matrix[1].y, lt_node.bind_matrix[1].z, lt_node.bind_matrix[2].x, lt_node.bind_matrix[2].y, lt_node.bind_matrix[2].z, lt_node.bind_matrix[3].x, lt_node.bind_matrix[3].y, lt_node.bind_matrix[3].z, lt_node.child_count])
+		#print("Node " + lt_node.name + "\n - Index: " + str(lt_node.index) + "\n - Flags: " + str(lt_node.flags) + "\n - Child Count: " + str(lt_node.child_count))
 		skeleton.add_bone(lt_node.name)
 
 		if lt_node.parent != null:
@@ -193,7 +193,7 @@ func process_animations(model, anim_player : AnimationPlayer):
 		var anim = Animation.new()
 		# Pre-make our track ids
 		for ni in range(model.node_count):
-			var key = "Skeleton:%s" % model.nodes[ni].name
+			var key = "Skeleton:" + model.nodes[ni].name
 			var track_id = anim.add_track(Animation.TYPE_TRANSFORM)
 			anim.track_set_path(track_id, key)
 		# End For

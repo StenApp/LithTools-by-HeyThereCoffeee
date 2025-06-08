@@ -49,9 +49,7 @@ func _on_RefreshButton_pressed():
 
 func show_warning(p_name):
 	$ConfirmationDialog.dialog_text = \
-\
-\
-	"\n		Plugin `%s` is currently disabled.\n\n		Do you want to enable it now?\n	" % [p_name]
+	"\n		Plugin `" + p_name + "` is currently disabled.\n\n		Do you want to enable it now?\n	"
 	$ConfirmationDialog.popup_centered()
 
 func _on_ConfirmationDialog_confirmed():

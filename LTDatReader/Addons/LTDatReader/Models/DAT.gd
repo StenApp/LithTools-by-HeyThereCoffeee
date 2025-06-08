@@ -104,10 +104,10 @@ class DAT:
 		
 		self.version = f.get_32()
 		
-		print("DAT Version: %d" % self.version)
+		print("DAT Version: " + str(self.version))
 				
 		if self.is_supported() == false:
-			return self._make_response(IMPORT_RETURN.ERROR, 'Unsupported file version (%d)' % self.version)
+			return self._make_response(IMPORT_RETURN.ERROR, 'Unsupported file version (' + str(self.version) + ')')
 		# End If
 				
 		self.object_data_pos = f.get_32()

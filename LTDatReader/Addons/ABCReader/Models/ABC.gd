@@ -46,10 +46,10 @@ class ABC:
 			
 			if section_name == 'Header':
 				self.version = f.get_32()
-				print("ABC Version: %d" % self.version)
+				print("ABC Version: " + str(self.version))
 				
 				if [9, 10, 11, 12, 13].has(self.version) == false:
-					return self._make_response(IMPORT_RETURN.ERROR, 'Unsupported file version (%d)' % self.version)
+					return self._make_response(IMPORT_RETURN.ERROR, 'Unsupported file version (' + str(self.version) + ')')
 				
 				f.seek(f.get_position() + 8)
 				self.node_count = f.get_32()
@@ -71,7 +71,7 @@ class ABC:
 				for i in range(distance_count):
 					self.lod_distances.append(f.get_float())
 					
-				print("Header Info:\n - Node Count: %d\n - LOD Count: %d\n - Weight Set Count: %d\n - Command String: %s\n - Internal Radius: %f\n - Distance Count: %d" % [self.node_count, self.lod_count, self.weight_set_count, self.command_string, self.internal_radius, distance_count])
+				print("Header Info:\n - Node Count: " + str(self.node_count) + "\n - LOD Count: " + str(self.lod_count) + "\n - Weight Set Count: " + str(self.weight_set_count) + "\n - Command String: " + self.command_string + "\n - Internal Radius: " + str(self.internal_radius) + "\n - Distance Count: " + str(distance_count))
 				# End For
 			elif section_name == 'Pieces':
 				var weight_count = f.get_32()
@@ -117,7 +117,7 @@ class ABC:
 				break
 			# End If
 			
-			print("Finished %s\n -> Next section at %d" % [section_name, next_section_offset])
+			print("Finished " + section_name + "\n -> Next section at " + str(next_section_offset))
 			
 		# End While
 		

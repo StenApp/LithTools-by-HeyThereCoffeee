@@ -60,7 +60,7 @@ class LTANode:
 		# Add our current depth in tabs
 		output_string += self._write_depth()
 
-		output_string += "(%s " % self._name
+		output_string += "(" + self._name + " "
 
 		if self._attribute != null:
 			output_string += self._resolve_type(self._attribute)
@@ -118,18 +118,18 @@ class LTANode:
 		# Special string, for "types"..
 		if value.find("___") == 0:
 			value.erase(0, 3)
-			return "%s" % value
+			return value
 		
-		return "\"%s\"" % value
+		return "\"" + value + "\""
 
 	func _serialize_float(value):
-		return "%.6f" % value
+		return str(value)
 
 	func _serialize_vector(value):
-		return "%.6f %.6f %.6f" % [value.x, value.y, value.z]
+		return str(value.x) + " " + str(value.y) + " " + str(value.z)
 
 	func _serialize_quat(value):
-		return "%.6f %.6f %.6f %.6f" % [value.x, value.y, value.z, value.w]
+		return str(value.x) + " " + str(value.y) + " " + str(value.z) + " " + str(value.w)
 
 	func _serialize_matrix(value):
 		var output_string = ""
@@ -248,7 +248,7 @@ class LTAWriter:
 				var add_to_object_nodes = false
 				
 				# Generic fallback
-				var label = "%s_Group" % world_object.name
+				var label = world_object.name + "_Group"
 				
 				for prop in world_object.properties:
 					var data = prop.get_lta_property_data()
@@ -442,7 +442,7 @@ class LTAWriter:
 				
 				# Create the proplist entry
 				var prop_list = global_prop_container.create_child('proplist').create_container()
-				prop_list.create_prop_entry('string', 'Name', "Brush_%s_%d" % [ world_model.world_name, running_prop_id ])
+				prop_list.create_prop_entry('string', 'Name', "Brush_" + world_model.world_name + "_" + str(running_prop_id))
 				prop_list.create_prop_entry('vector', 'Pos', null).create_property('vector').create_property(Vector3(0,0,0))
 				prop_list.create_prop_entry('rotation', 'Rotation', null).create_property('eulerangles').create_property(Vector3(0,0,0))
 				
@@ -498,7 +498,7 @@ class LTAWriter:
 		
 		var dtx_reader = preload("res://Addons/DTXReader/TextureBuilder.gd").new()
 		
-		var txt_path = "%s_missing_tex.txt" % path
+		var txt_path = path + "_missing_tex.txt"
 #		file = File.new()
 #		file.open(txt_path, File.WRITE)
 #		var nolf_pc_path = "D:\\Games\\NOLF\\NOLF2\\"
@@ -510,7 +510,7 @@ class LTAWriter:
 #			for texture in world_model.texture_names:
 #				var texture_name = texture.name
 #
-#				if file.file_exists("%s%s" % [nolf_pc_path, texture_name]):
+#				#if file.file_exists(nolf_pc_path + texture_name):
 #					continue
 #				# End If
 #
@@ -521,14 +521,14 @@ class LTAWriter:
 #		var dir = Directory.new()
 #
 #		for texture_name in missing_textures.keys():
-#			file.store_string("%s\n" % texture_name)
-#			var tex = dtx_reader.build("%s%s" % [nolf_ps2_path, texture_name], [])
-#			var save_path = ".\\Textures\\%s" % [texture_name]
+#			#file.store_string(texture_name + "\n")
+#			#var tex = dtx_reader.build(nolf_ps2_path + texture_name, [])
+#			#var save_path = ".\\Textures\\" + texture_name
 #			dir.make_dir_recursive(save_path.get_base_dir())
 #
 #			var png_name = texture_name.replacen(".dtx", ".png")
 #
-#			tex.get_data().save_png(".\\Textures\\%s" % [png_name])
+#			#tex.get_data().save_png(".\\Textures\\" + png_name)
 #		# End For
 #
 #		file.close()
