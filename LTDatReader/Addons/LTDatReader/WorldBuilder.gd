@@ -522,7 +522,7 @@ func fill_array_mesh_jupiter(model, world_meshes = []):
 		var block = model.render_data.render_blocks[i]
 		texture_references_per_triangle = []
 		
-		#mesh_names.append("RenderBlock %d" % i)
+		#mesh_names.append("RenderBlock " + str(i))
 		
 		var previous_tri_count = 0
 		for j in range(0, len(block.sections)):
@@ -649,7 +649,7 @@ func fill_array_mesh(model, world_models = []):
 			print("Skipping " + world_model.world_name)
 			continue
 
-		#print("Processing %s" % world_model.world_name)
+		#print("Processing " + world_model.world_name)
 		
 		#
 		# TODO: Needs to be split by texture 

@@ -7,7 +7,8 @@ class OBJExporter:
 	func print_vertex_data(mdt: MeshDataTool):
 		for i in range(mdt.get_vertex_count()):
 			var vertex = mdt.get_vertex(i)
-			self.obj_buffer += "v %f %f %f\n" % [vertex.x, vertex.y, vertex.z]
+			self.obj_buffer += "v " + str(vertex.x) + " " + str(vertex.y) + " " + str(vertex.z) + "\n"
+
 		
 	
 	
@@ -22,14 +23,14 @@ class OBJExporter:
 			
 			uv = Vector2(uv.x, 1.0 - uv.y)
 			
-			self.obj_buffer += "vt %f %f\n" % [uv.x, uv.y]
+			self.obj_buffer += "vt " + str(uv.x) + " " + str(uv.y) + "\n"
 		
 	
 	
 	func print_normal_data(mdt: MeshDataTool):
 		for i in range(mdt.get_vertex_count()):
 			var normal = mdt.get_vertex_normal(i)
-			self.obj_buffer += "vn %f %f %f\n" % [normal.x, normal.y, normal.z]
+			self.obj_buffer += "vn " + str(normal.x) + " " + str(normal.y) + " " + str(normal.z) + "\n"
 		
 	
 	
@@ -40,7 +41,7 @@ class OBJExporter:
 			for j in range(3):
 				var face_vertex = mdt.get_face_vertex(i, j)
 				obj_face_vertex = (face_vertex + 1) + self.last_vertex_index
-				self.obj_buffer += " %d/%d/%d" % [obj_face_vertex, obj_face_vertex, obj_face_vertex]
+				self.obj_buffer += " " + str(obj_face_vertex) + "/" + str(obj_face_vertex) + "/" + str(obj_face_vertex)
 			self.obj_buffer += "\n"
 		
 		
@@ -75,7 +76,7 @@ class OBJExporter:
 		self.obj_buffer += "# Vertex Data\n"
 		index = 0
 		for mdt in mdt_list:
-			self.obj_buffer += "# Mesh %d\n" % index
+			self.obj_buffer += "# Mesh " + str(index) + "\n"
 			self.print_vertex_data(mdt)
 			index += 1
 		
@@ -83,7 +84,7 @@ class OBJExporter:
 		self.obj_buffer += "# UV Data\n"
 		index = 0
 		for mdt in mdt_list:
-			self.obj_buffer += "# Mesh %d\n" % index
+			self.obj_buffer += "# Mesh " + str(index) + "\n"
 			self.print_uv_data(mdt, use_uv2)
 			index += 1
 		
@@ -92,7 +93,7 @@ class OBJExporter:
 		self.obj_buffer += "# Vertex Normal Data\n"
 		index = 0
 		for mdt in mdt_list:
-			self.obj_buffer += "# Mesh %d\n" % index
+			self.obj_buffer += "# Mesh " + str(index) + "\n"
 			self.print_normal_data(mdt)
 			index += 1
 		
@@ -104,7 +105,7 @@ class OBJExporter:
 		self.obj_buffer += "# Face Data\n"
 		index = 0
 		for mdt in mdt_list:
-			self.obj_buffer += "# Mesh %d\n" % index
+			self.obj_buffer += "# Mesh " + str(index) + "\n"
 			self.print_face_data(mdt)
 			index += 1
 		
