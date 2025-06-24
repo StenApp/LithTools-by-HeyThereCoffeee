@@ -1,7 +1,7 @@
 tool 
 extends HBoxContainer
 
-const ADDONS_PATH = "res://addons/"
+const ADDONS_PATH = "res://Addons/"
 const PLUGIN_PATH = "godot-plugin-refresher"
 
 signal request_refresh_plugin(p_name)

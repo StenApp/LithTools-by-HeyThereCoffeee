@@ -1,39 +1,6 @@
 extends Camera
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export  var stabilize_horizon = false
 export  var mouse_enabled = true
 export  var mouse_invert = false

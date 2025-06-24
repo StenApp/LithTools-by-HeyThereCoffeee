@@ -9,49 +9,6 @@ var debug_file = null
 
 const LIGHTMAP_ATLAS_SIZE = 2048.0#4096.0#2048.0
 
-# TexturedPlane-style vector generation based on surface normal
-# This replicates the SetupBaseTextureSpace function from EditPoly.cpp
-
-# Texture alignment planes (from g_TexturePlanes in EditPoly.cpp)
-const TEXTURE_PLANES = [
-	Vector3(0.0, 1.0, 0.0),   # Bottom
-	Vector3(0.0, -1.0, 0.0),  # Top
-	Vector3(1.0, 0.0, 0.0),   # East-facing wall
-	Vector3(-1.0, 0.0, 0.0),  # West-facing wall
-	Vector3(0.0, 0.0, 1.0),   # North-facing wall
-	Vector3(0.0, 0.0, -1.0)   # South-facing wall
-]
-
-# Right vectors (from g_RightVectors in EditPoly.cpp)
-const RIGHT_VECTORS = [
-	Vector3(1.0, 0.0, 0.0),
-	Vector3(-1.0, 0.0, 0.0),
-	Vector3(0.0, 0.0, 1.0),
-	Vector3(0.0, 0.0, -1.0),
-	Vector3(-1.0, 0.0, 0.0),
-	Vector3(1.0, 0.0, 0.0)
-]
-
-func setup_base_texture_space(surface_normal: Vector3):
-	"""
-	Generate proper P and Q vectors based on surface normal direction.
-	This replicates CEditPoly::SetupBaseTextureSpace()
-	"""
-	var max_dot = -999999.0
-	var closest_plane = 0
-	
-	# Find the closest texture alignment plane to this polygon normal
-	for i in range(len(TEXTURE_PLANES)):
-		var dot = surface_normal.dot(TEXTURE_PLANES[i])
-		if dot > max_dot:
-			max_dot = dot
-			closest_plane = i
-	
-	# Generate P and Q vectors based on closest plane
-	var P = RIGHT_VECTORS[closest_plane]
-	var Q = P.cross(TEXTURE_PLANES[closest_plane])
-	
-	return [P, Q]
 
 func chunk(array, by): 
 	var chunks = []
