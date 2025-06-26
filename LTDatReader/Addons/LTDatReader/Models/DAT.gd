@@ -819,7 +819,7 @@ class DAT:
 		var texture_count = 0
 		
 		# Lists
-		var texture_names = []
+		var texture_list = []
 		var verts = []
 		var points = []
 		var polies = []
@@ -880,7 +880,10 @@ class DAT:
 			for _i in range(self.texture_count):
 				var texture = WorldTexture.new()
 				texture.read(dat, f)
-				self.texture_names.append(texture)
+				self.texture_list.append(texture.name)
+				# var texture = WorldTexture.new()
+				# texture.read(dat, f)
+				# self.texture_names.append(texture)
 			# End If
 			
 			# Not sure why it's poly count..

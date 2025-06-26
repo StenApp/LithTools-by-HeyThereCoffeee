@@ -402,18 +402,29 @@ class LTAWriter:
 				var distance_node = edit_poly.create_child('dist', plane.distance)
 				
 				var texture_index = 0
+				var texture_name = "missing_texture"  # Default-Wert
+				texture_index = surface.texture_index
 				
-				if model.PLATFORM == "PS2":
-					texture_index = poly.texture_index
+				if texture_index >= 0 and texture_index < model.texture_list.size():
+					texture_name = model.texture_list[texture_index]
 				else:
-					texture_index = surface.texture_index
-				
-				var texture_name = world_model.texture_names[texture_index].name
-				
+					push_error("Ungültiger globaler Texturindex: %d" % texture_index)
+					texture_name = "missing_texture"
+					
 				var texture_info_node = edit_poly.create_child('textureinfo')
-				texture_info_node.create_property(surface.uv1)
-				texture_info_node.create_property(surface.uv2)
-				texture_info_node.create_property(surface.uv3)
+				# texture_info_node.create_property(surface.uv1)
+				# texture_info_node.create_property(surface.uv2)
+				# texture_info_node.create_property(surface.uv3)
+				
+				if "uv1" in poly and poly.uv1 != null:
+					texture_info_node.create_property(poly.uv1)  # O
+					texture_info_node.create_property(poly.uv2)  # P
+					texture_info_node.create_property(poly.uv3)  # Q
+				else:
+					texture_info_node.create_property(surface.uv1)
+					texture_info_node.create_property(surface.uv2)
+					texture_info_node.create_property(surface.uv3)
+				
 				texture_info_node.create_child('sticktopoly', 1)
 				texture_info_node.create_child('name', texture_name)
 				
@@ -534,6 +545,8 @@ class LTAWriter:
 #		file.close()
 		
 		print("Finished writing missing textures!")
+		
+		return OK
 
 	# End func
 # End Class

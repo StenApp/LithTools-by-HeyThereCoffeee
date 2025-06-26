@@ -103,29 +103,21 @@ class LTB_PS2:
 		# Okay back to world models
 		f.seek(world_model_pos)
 
-		# var texture_count = f.get_32()
-		# var texture_size = f.get_32()
+		var texture_count = f.get_32()
+		var texture_size = f.get_32()
+		
+		print("=== TEXTURE LOADING DEBUG ===")
+		print("File says texture_count: ", texture_count)
+		print("File says texture_size: ", texture_size)		
 		
 		# # Read in all the textures used in this level
 		# for _i in range(texture_count):
 			# self.texture_list.append(self.read_string(f))
-			
-		var texture_count = f.get_32()
-		var texture_size = f.get_32()
-
-		print("=== TEXTURE LOADING DEBUG ===")
-		print("File says texture_count: ", texture_count)
-		print("File says texture_size: ", texture_size)
 
 		# Read in all the textures used in this level
 		for _i in range(texture_count):
 			var texture_name = self.read_string(f)
 			self.texture_list.append(texture_name)
-			if _i < 10 or _i > texture_count - 5:  # Show first 10 and last 5
-				print("Texture ", _i, ": ", texture_name)
-
-		print("FINAL: Loaded ", self.texture_list.size(), " textures")
-		print("==============================")	
 		
 		self.world_model_count = f.get_32()
 		print("World Model Count: ", self.world_model_count)
@@ -315,10 +307,10 @@ class LTB_PS2:
 		
 		pass
 		
-	# # To keep compat
-	# class WorldTexture:
-		# var name = ""
-	# # End Class
+	# To keep compat
+	class WorldTexture:
+		var name = ""
+	# End Class
 	
 	class WorldPlane:
 		var normal = Vector3()
@@ -673,6 +665,7 @@ class LTB_PS2:
 		var texture_count = 0
 		
 		# Lists
+		var texture_names = []
 		var verts = []
 		var points = []
 		var polies = []
@@ -754,9 +747,15 @@ class LTB_PS2:
 				var poly = WorldPoly.new()
 				poly.read(ltb, f, self.verts[i], self.surfaces, self.planes)
 				
-				# FIX: Set the correct texture index from the surface
 				var surface = self.surfaces[poly.surface_index]
-				poly.texture_index = surface.texture_index
+				var world_texture = WorldTexture.new()
+				world_texture.name = ltb.texture_list[surface.texture_index]
+				self.texture_names.append( world_texture )
+				poly.texture_index = len(self.texture_names) -1
+				
+				# # FIX: Set the correct texture index from the surface
+				# var surface = self.surfaces[poly.surface_index]
+				# poly.texture_index = surface.texture_index
 				
 				self.polies.append(poly)
 			# End For

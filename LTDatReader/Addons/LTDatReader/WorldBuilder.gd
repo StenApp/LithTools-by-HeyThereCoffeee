@@ -237,12 +237,16 @@ func build(source_file, options):
 	if export_to_lta:
 		var writer = lta_writer.LTAWriter.new()
 
-		var out_path = source_file.replacen(".ltb", ".lta")
-		out_path = source_file.replacen(".dat", ".lta")
+		var dir_path = source_file.get_base_dir()
+		var base_name = source_file.get_file().get_basename()
+		var out_path = dir_path.plus_file(base_name + ".lta")
 
 		print("Exporting LTA to " + out_path)
-
-		writer.write(model, out_path, 2)
+		
+		var result = writer.write(model, out_path, 2)
+		if result != OK:
+			push_error("Failed to write LTA file: " + str(result))
+			return FAILED
 
 	# Now that we've packed root into the scene, it's time to clean it up!
 	root.queue_free()
@@ -300,7 +304,13 @@ func opq_to_uv_enhanced(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, pol
 	if should_debug_texture(texture_name):
 		debug_uv_calculation(vertex, o, p, q, polygon_center, plane_normal, uv_origin, local_p, local_q, u, v, texture_name)
 	
-	return Vector2(u, v)
+	#return Vector2(u, v)
+	return {
+	"uv": Vector2(u, v),
+	"O": uv_origin,
+	"P": local_p,
+	"Q": local_q
+}
 
 func calculate_polygon_uv_origin(surface_uv1: Vector3, surface_uv2: Vector3, surface_uv3: Vector3, polygon_center: Vector3, plane_normal: Vector3, plane_distance: float):
 	"""
@@ -431,8 +441,16 @@ func opq_to_uv_adaptive(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, pol
 	"""
 	
 	# Simple case: Single surface with axis-aligned geometry
+	# if surface_count == 1 and is_axis_aligned_plane(plane_normal):
+		# return opq_to_uv_simple(vertex, o, p, q, polygon_center, plane_normal, texture_name, tex_width, tex_height)
 	if surface_count == 1 and is_axis_aligned_plane(plane_normal):
-		return opq_to_uv_simple(vertex, o, p, q, polygon_center, plane_normal, texture_name, tex_width, tex_height)
+		var uv = opq_to_uv_simple(vertex, o, p, q, polygon_center, plane_normal, texture_name, tex_width, tex_height)
+		return {
+			"uv": uv,
+			"O": o,
+			"P": p,
+			"Q": q
+		}
 	
 	# Complex case: Multiple surfaces or angled geometry
 	else:
@@ -735,19 +753,18 @@ func fill_array_mesh(model, world_models = []):
 			var texture_index = 0
 			var surface = world_model.surfaces[poly.surface_index]
 			
-			if model.PLATFORM == "PS2":
-				texture_index = poly.texture_index
-			else:
-				texture_index = surface.texture_index
+			texture_index = surface.texture_index
 
 			var texture_name = ""
-
+						
+			#print("texture_index: %d, texture_names size: %d" % [texture_index, world_model.texture_names.size()])
+			
+			#texture_name = world_model.texture_names[texture_index].name
 			if texture_index >= 0 and texture_index < model.texture_list.size():
 				texture_name = model.texture_list[texture_index]
 			else:
-				texture_name = model.texture_list[0] if model.texture_list.size() > 0 else "default.dtx"
-						
-			#var texture_name = world_model.texture_names[texture_index].name
+				push_error("Ungültiger Texturindex: %d" % texture_index)
+				texture_name = "nothing.dtx"
 			
 			var tex = get_texture(texture_name)
 			var tex_width = 256
@@ -780,18 +797,15 @@ func fill_array_mesh(model, world_models = []):
 			var P: Vector3  
 			var Q: Vector3
 
-			if model.PLATFORM == "PS2":
-				O = poly.uv1
-				P = poly.uv2
-				Q = poly.uv3
-			elif model.PLATFORM == "PC" and (model.is_lithtech_1() or model.is_lithtech_2()):
-				O = surface.uv1
-				P = surface.uv2
-				Q = surface.uv3
+			if (model.PLATFORM == "PC" and (model.is_lithtech_1() or model.is_lithtech_2())) or model.PLATFORM == "PS2":
+				uv1 = surface.uv1
+				uv2 = surface.uv2
+				uv3 = surface.uv3
 			else:
-				O = poly.uv1
-				P = poly.uv2
-				Q = poly.uv3
+				uv1 = poly.uv1
+				uv2 = poly.uv2
+				uv3 = poly.uv3
+
 
 			var polygon_center = Vector3(poly.center.x, poly.center.y, poly.center.z)
 			
@@ -811,10 +825,15 @@ func fill_array_mesh(model, world_models = []):
 				# Simple UV calculation using the function
 				#var final_uv = opq_to_uv(vert, O, P, Q, polygon_center, plane.normal, texture_name, tex_width, tex_height)
 				#var final_uv = opq_to_uv(vert, O, P, Q, polygon_center, plane.normal, plane.distance, texture_name, tex_width, tex_height)
-				var final_uv = opq_to_uv_adaptive(vert, O, P, Q, polygon_center, plane.normal, plane.distance, poly.surface_index, world_model.surface_count, texture_name, tex_width, tex_height)
 
+				var uv_result = opq_to_uv_adaptive(vert, O, P, Q, polygon_center, plane.normal, plane.distance, poly.surface_index, world_model.surface_count, texture_name, tex_width, tex_height)
 
-				uvs.append(final_uv)
+				uvs.append(uv_result.uv)
+
+				# Mini-Hook: OPQ-Update for LTA exporter to fix stripes instead of textures
+				poly.uv1 = uv_result.O
+				poly.uv2 = uv_result.P
+				poly.uv3 = uv_result.Q
 			
 			# Lightmap UV calculation (keeping existing code unchanged)
 			if lm_image != null and lm_image.get_width() > 0 and lm_image.get_height() > 0:
