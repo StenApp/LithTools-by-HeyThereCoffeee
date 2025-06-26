@@ -797,14 +797,18 @@ func fill_array_mesh(model, world_models = []):
 			var P: Vector3  
 			var Q: Vector3
 
-			if (model.PLATFORM == "PC" and (model.is_lithtech_1() or model.is_lithtech_2())) or model.PLATFORM == "PS2":
-				uv1 = surface.uv1
-				uv2 = surface.uv2
-				uv3 = surface.uv3
+			if model.PLATFORM == "PS2":
+				O = poly.uv1
+				P = poly.uv2
+				Q = poly.uv3
+			elif model.PLATFORM == "PC" and (model.is_lithtech_1() or model.is_lithtech_2()):
+				O = surface.uv1
+				P = surface.uv2
+				Q = surface.uv3
 			else:
-				uv1 = poly.uv1
-				uv2 = poly.uv2
-				uv3 = poly.uv3
+				O = poly.uv1
+				P = poly.uv2
+				Q = poly.uv3
 
 
 			var polygon_center = Vector3(poly.center.x, poly.center.y, poly.center.z)
