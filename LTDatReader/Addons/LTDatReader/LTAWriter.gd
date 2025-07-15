@@ -48,11 +48,18 @@ class LTANode:
 
 		return node
 		
+	# func create_prop_entry(type, name, data):
+		# var item = self.create_child(type, name)
+		# item.create_container()
+		# return item.create_child('data', data)
+
 	func create_prop_entry(type, name, data):
 		var item = self.create_child(type, name)
 		item.create_container()
-		return item.create_child('data', data)
-
+		if data != null:
+			item.create_child('data', data)
+		return item
+		
 	# Loop through all the children and write out their props and depth
 	func serialize():
 		var output_string = ""
@@ -480,11 +487,19 @@ class LTAWriter:
 				prop_list.create_prop_entry('bool', 'VisBlocker', int( surface.flags & (1<<21) != 0 ))
 				prop_list.create_prop_entry('bool', 'NotAStep', int( surface.flags & (1<<22) != 0 ))
 				prop_list.create_prop_entry('bool', 'NoWallWalk', int( surface.flags & (1<<23) != 0 ))
-				prop_list.create_prop_entry('bool', 'BlockLight', int( surface.flags & (1<<24) == 0 ))
+				#prop_list.create_prop_entry('bool', 'BlockLight', int( surface.flags & (1<<24) == 0 ))
+				var block_light = int(surface.flags & (1 << 30) != 0)
+				prop_list.create_prop_entry('bool', 'BlockLight', block_light)
 
 				prop_list.create_prop_entry('longint', 'DetailLevel', 0)
-				prop_list.create_prop_entry('string', 'Effect', '')
-				prop_list.create_prop_entry('string', 'EffectParam', '')
+				#prop_list.create_prop_entry('string', 'Effect', '')
+				#prop_list.create_prop_entry('string', 'EffectParam', '')
+				if surface.use_effects == 1:
+					prop_list.create_prop_entry('string', 'Effect', surface.effect_name)
+					prop_list.create_prop_entry('string', 'EffectParam', surface.effect_param)
+				else:
+					prop_list.create_prop_entry('string', 'Effect', null)
+					prop_list.create_prop_entry('string', 'EffectParam', null)
 				prop_list.create_prop_entry('real', 'FrictionCoefficient', 1.0)
 				
 				created_brush_node = true
