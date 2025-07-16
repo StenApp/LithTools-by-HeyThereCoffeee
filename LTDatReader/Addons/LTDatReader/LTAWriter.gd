@@ -56,7 +56,7 @@ class LTANode:
 	func create_prop_entry(type, name, data):
 		var item = self.create_child(type, name)
 		item.create_container()
-		if data != null:
+		if data != null and not (typeof(data) == TYPE_STRING and data.strip_edges() == ""):
 			item.create_child('data', data)
 		return item
 		
@@ -437,9 +437,9 @@ class LTAWriter:
 				
 				edit_poly.create_child('flags')
 				edit_poly.create_child('shade', [0,0,0])
-				edit_poly.create_child('physicsmaterial', 'Default')
-				edit_poly.create_child('surfacekey', "")
-				edit_poly.create_child('textures').create_container()
+				#edit_poly.create_child('physicsmaterial', 'Default')
+				#edit_poly.create_child('surfacekey', "")
+				#edit_poly.create_child('textures').create_container()
 				
 				# If we've already created the brush node and props,
 				# we don't need to do it again!
