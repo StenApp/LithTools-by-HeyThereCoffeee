@@ -913,6 +913,25 @@ class LTB_PS2:
 		# Value is based off of code!
 		var value = null
 		
+		const LONG_INT_AS_INT = [
+			"Flags", "StateFlags", "AdditionalFlags", "Index",
+			"Team", "Type", "WeaponId", "HitPoints", "MaxHitPoints",
+			"Armor", "MaxArmor" , "InfoId"
+		]
+
+		func _convert_long_int(name: String, raw_val: int) -> Variant:
+			# 32-Bit Integer -> Float
+			var f = _int_to_float(raw_val)
+			if name in LONG_INT_AS_INT:
+				return int(f)
+			return f
+
+		func _int_to_float(val: int) -> float:
+			var buf = StreamPeerBuffer.new()
+			buf.put_32(val)
+			buf.seek(0)
+			return buf.get_float()
+		
 		func read(ltb : LTB_PS2, string_list, f : File):
 			var name_index = f.get_32()
 			self.name = string_list[name_index]
@@ -929,12 +948,14 @@ class LTB_PS2:
 			elif self.code == PROP_BOOL:
 				self.value = f.get_8()
 			elif self.code == PROP_FLAGS or self.code == PROP_LONG_INT:
-				self.value = f.get_32()
+				#self.value = f.get_32()
+				var raw_val = f.get_32()
+				self.value = _convert_long_int(self.name, raw_val)
 				
-				# For some reason they have floating point data in longint?
-				# Fix it manually...
-				if self.value == 1065353216:
-					self.value = 1
+				# # For some reason they have floating point data in longint?
+				# # Fix it manually...
+				# if self.value == 1065353216:
+					# self.value = 1
 				
 			elif self.code == PROP_ROTATION:
 				self.value = ltb.read_vector3(f)
