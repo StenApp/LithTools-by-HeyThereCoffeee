@@ -207,15 +207,6 @@ class LTB_PS2:
 			Vector3( matrix[3], matrix[7], matrix[11] )
 		)
 	
-	func int_to_float(val: int) -> float:
-		var bytes = PoolByteArray([
-			val & 0xFF,
-			(val >> 8) & 0xFF,
-			(val >> 16) & 0xFF,
-			(val >> 24) & 0xFF
-		])
-		return bytes.get_float32(0)
-	
 	##################
 	# Internal Classes
 	##################
@@ -938,17 +929,12 @@ class LTB_PS2:
 			elif self.code == PROP_BOOL:
 				self.value = f.get_8()
 			elif self.code == PROP_FLAGS or self.code == PROP_LONG_INT:
-				var raw = f.get_32()
-				var fval = ltb.int_to_float(raw)
-				if fval >= 0.0 and fval <= 1.0:
-					self.value = fval
-				else:
-					self.value = rawself.value = f.get_32()
+				self.value = f.get_32()
 				
-				## For some reason they have floating point data in longint?
-				## Fix it manually...
-				#if self.value == 1065353216:
-					#self.value = 1
+				# For some reason they have floating point data in longint?
+				# Fix it manually...
+				if self.value == 1065353216:
+					self.value = 1
 				
 			elif self.code == PROP_ROTATION:
 				self.value = ltb.read_vector3(f)
