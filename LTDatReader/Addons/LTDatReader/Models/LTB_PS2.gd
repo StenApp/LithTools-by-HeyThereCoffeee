@@ -214,18 +214,7 @@ class LTB_PS2:
 			(val >> 16) & 0xFF,
 			(val >> 24) & 0xFF
 		])
-		var stream = StreamPeerBuffer.new()
-		stream.data_array = bytes
-		return stream.get_float()
-		
-	# func int_to_float(val: int) -> float:
-		# var bytes = PoolByteArray([
-			# val & 0xFF,
-			# (val >> 8) & 0xFF,
-			# (val >> 16) & 0xFF,
-			# (val >> 24) & 0xFF
-		# ])
-		# return bytes.get_float32(0)
+		return bytes.get_float32(0)
 	
 	##################
 	# Internal Classes
@@ -954,7 +943,7 @@ class LTB_PS2:
 				if fval >= 0.0 and fval <= 1.0:
 					self.value = fval
 				else:
-					self.value = raw
+					self.value = rawself.value = f.get_32()
 				
 				## For some reason they have floating point data in longint?
 				## Fix it manually...
