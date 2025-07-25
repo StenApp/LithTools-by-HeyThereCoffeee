@@ -17,6 +17,10 @@
 # An example/ (lt-model-0 (on-load-cmds ( ... ) ). "lt-model-0" is our depth=0 node, and "on-load-cmds" is our depth=1 node, and a child node of "lt-model-0". 
 #
 tool
+
+const INDENT = "\t"
+const PROP_LABELS = preload("res://PROP_LABELS.gd").PROP_LABELS
+
 class LTANode:
 	var _name = ""
 	var _attribute = null
@@ -298,15 +302,21 @@ class LTAWriter:
 				var prop_list = global_prop_container.create_child('proplist').create_container()
 				for prop in world_object.properties:
 					var data = prop.get_lta_property_data()
-					
 					if data == null:
 						continue
-					# End if
 					
+					var label = PROP_LABELS.get(data[1], null)
+
 					if len(data) == 3:
-						prop_list.create_prop_entry(data[0], data[1], data[2])
+						var node = create_prop_entry(data[0], data[1], data[2], prop_list)
+						if label:
+							node.create_child(label)
 					else:
-						prop_list.create_prop_entry(data[0], data[1], null).create_property(data[2]).create_property(data[3])
+						var node = create_prop_entry(data[0], data[1], null, prop_list)
+						if label:
+							node.create_child(label)
+						node.create_property(data[2]).create_property(data[3])
+
 					# End If
 				# End For
 				
@@ -396,8 +406,13 @@ class LTAWriter:
 						continue
 
 					face_indexes.append(running_face_index) 
-					point_list.create_property([ points.x, points.y, points.z, 255, 255, 255, 255 ])
-					
+					#point_list.create_property([ points.x, points.y, points.z, 255, 255, 255, 255 ])
+					point_list.create_property([
+						"%.6f" % points.x,
+						"%.6f" % points.y,
+						"%.6f" % points.z
+					])
+
 					running_face_index += 1
 				# End For
 			
@@ -405,8 +420,13 @@ class LTAWriter:
 				var edit_poly = poly_list_container.create_child('editpoly')
 				
 				var f_node = edit_poly.create_child('f', face_indexes)
-				var n_node = edit_poly.create_child('n', plane.normal)
-				var distance_node = edit_poly.create_child('dist', plane.distance)
+				var normal = [ 
+					"%.6f" % plane.normal.x, 
+					"%.6f" % plane.normal.y, 
+					"%.6f" % plane.normal.z 
+				]
+				var n_node = edit_poly.create_child('n', normal)
+				var distance_node = edit_poly.create_child('dist', "%.6f" % plane.distance)
 				
 				var texture_index = 0
 				var texture_name = "missing_texture"  # Default-Wert
@@ -419,27 +439,26 @@ class LTAWriter:
 					texture_name = "missing_texture"
 					
 				var texture_info_node = edit_poly.create_child('textureinfo')
-				# texture_info_node.create_property(surface.uv1)
-				# texture_info_node.create_property(surface.uv2)
-				# texture_info_node.create_property(surface.uv3)
-				
+				func format_vec3(v):
+					return ["%.6f" % v.x, "%.6f" % v.y, "%.6f" % v.z]
+
 				if "uv1" in poly and poly.uv1 != null:
-					texture_info_node.create_property(poly.uv1)  # O
-					texture_info_node.create_property(poly.uv2)  # P
-					texture_info_node.create_property(poly.uv3)  # Q
+					texture_info_node.create_property(format_vec3(poly.uv1))
+					texture_info_node.create_property(format_vec3(poly.uv2))
+					texture_info_node.create_property(format_vec3(poly.uv3))
 				else:
-					texture_info_node.create_property(surface.uv1)
-					texture_info_node.create_property(surface.uv2)
-					texture_info_node.create_property(surface.uv3)
+					texture_info_node.create_property(format_vec3(surface.uv1))
+					texture_info_node.create_property(format_vec3(surface.uv2))
+					texture_info_node.create_property(format_vec3(surface.uv3))
 				
 				texture_info_node.create_child('sticktopoly', 1)
 				texture_info_node.create_child('name', texture_name)
 				
 				edit_poly.create_child('flags')
 				edit_poly.create_child('shade', [0,0,0])
-				edit_poly.create_child('physicsmaterial', 'Default')
-				edit_poly.create_child('surfacekey', "")
-				edit_poly.create_child('textures').create_container()
+				# edit_poly.create_child('physicsmaterial', 'Default')
+				# edit_poly.create_child('surfacekey', "")
+				# edit_poly.create_child('textures').create_container()
 				
 				# If we've already created the brush node and props,
 				# we don't need to do it again!
@@ -461,8 +480,20 @@ class LTAWriter:
 				# Create the proplist entry
 				var prop_list = global_prop_container.create_child('proplist').create_container()
 				prop_list.create_prop_entry('string', 'Name', "Brush_" + world_model.world_name + "_" + str(running_prop_id))
-				prop_list.create_prop_entry('vector', 'Pos', null).create_property('vector').create_property(Vector3(0,0,0))
-				prop_list.create_prop_entry('rotation', 'Rotation', null).create_property('eulerangles').create_property(Vector3(0,0,0))
+				
+				var pos_node = prop_list.create_child('vector', 'Pos')
+				pos_node.create_child('data').create_child('vector', [
+					"%.6f" % node.pos.x,
+					"%.6f" % node.pos.y,
+					"%.6f" % node.pos.z
+				])
+
+				var rot_node = prop_list.create_child('rotation', 'Rotation')
+				rot_node.create_child('data').create_child('eulerangles', [
+					"%.6f" % node.rotation.x,
+					"%.6f" % node.rotation.y,
+					"%.6f" % node.rotation.z
+])
 				
 				# Holy heck!
 				prop_list.create_prop_entry('bool', 'Solid', int( surface.flags & (1<<0) != 0 ))
@@ -500,7 +531,7 @@ class LTAWriter:
 				else:
 					prop_list.create_prop_entry('string', 'Effect', null)
 					prop_list.create_prop_entry('string', 'EffectParam', null)
-				prop_list.create_prop_entry('real', 'FrictionCoefficient', 1.0)
+				prop_list.create_prop_entry('real', 'FrictionCoefficient', 1.000000)
 				
 				created_brush_node = true
 				
