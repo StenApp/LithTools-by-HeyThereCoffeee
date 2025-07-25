@@ -19,7 +19,7 @@
 tool
 
 const INDENT = "\t"
-const PROP_LABELS = preload("res://PROP_LABELS.gd").PROP_LABELS
+const PROP_LABELS = preload("res://Addons//LTDatReader//PROP_LABELS.gd").PROP_LABELS
 
 class LTANode:
 	var _name = ""
@@ -34,8 +34,15 @@ class LTANode:
 		self._children = []
 
 	# Originally its own node type, but it's basically a nameless child..so eh.
-	func create_property(value=''):
-		return self.create_child('', value)
+	# func create_property(value=''):
+		# return self.create_child('', value)
+	func create_property(value):
+		if typeof(value) == TYPE_STRING and (value == "vector" or value == "eulerangles"):
+			return self.create_child(value)
+		elif typeof(value) == TYPE_VECTOR3:
+			return self.create_child('', [ "%.6f" % value.x, "%.6f" % value.y, "%.6f" % value.z ])
+		else:
+			return self.create_child('', value)
 
 	# Container is just an empty set of braces
 	func create_container():
@@ -133,11 +140,18 @@ class LTANode:
 		
 		return "\"" + value + "\""
 
+	# func _serialize_float(value):
+		# return str(value)
+
+	# func _serialize_vector(value):
+		# return str(value.x) + " " + str(value.y) + " " + str(value.z)
+	
 	func _serialize_float(value):
-		return str(value)
+		return "%.6f" % float(value)
 
 	func _serialize_vector(value):
-		return str(value.x) + " " + str(value.y) + " " + str(value.z)
+		return "%.6f %.6f %.6f" % [value.x, value.y, value.z]
+		
 
 	func _serialize_quat(value):
 		return str(value.x) + " " + str(value.y) + " " + str(value.z) + " " + str(value.w)
@@ -209,7 +223,10 @@ class NodeWriter:
 
 class LTAWriter:
 	var _version = 'not-set'
-
+	
+	func format_float(value):
+		return "%.6f" % float(value)
+	
 	func write(model, path, version):
 		# Set the version
 		self._version = version
@@ -305,16 +322,16 @@ class LTAWriter:
 					if data == null:
 						continue
 					
-					var label = PROP_LABELS.get(data[1], null)
+					var prop_label = PROP_LABELS.get(data[1], null)
 
 					if len(data) == 3:
-						var node = create_prop_entry(data[0], data[1], data[2], prop_list)
-						if label:
-							node.create_child(label)
+						var node = prop_list.create_prop_entry(data[0], data[1], data[2])
+						if prop_label:
+							node.create_child(prop_label)
 					else:
-						var node = create_prop_entry(data[0], data[1], null, prop_list)
-						if label:
-							node.create_child(label)
+						var node = prop_list.create_prop_entry(data[0], data[1], null)
+						if prop_label:
+							node.create_child(prop_label)
 						node.create_property(data[2]).create_property(data[3])
 
 					# End If
@@ -407,11 +424,7 @@ class LTAWriter:
 
 					face_indexes.append(running_face_index) 
 					#point_list.create_property([ points.x, points.y, points.z, 255, 255, 255, 255 ])
-					point_list.create_property([
-						"%.6f" % points.x,
-						"%.6f" % points.y,
-						"%.6f" % points.z
-					])
+					point_list.create_property([points.x, points.y, points.z])
 
 					running_face_index += 1
 				# End For
@@ -420,13 +433,11 @@ class LTAWriter:
 				var edit_poly = poly_list_container.create_child('editpoly')
 				
 				var f_node = edit_poly.create_child('f', face_indexes)
-				var normal = [ 
-					"%.6f" % plane.normal.x, 
-					"%.6f" % plane.normal.y, 
-					"%.6f" % plane.normal.z 
-				]
+				
+				var normal = [plane.normal.x, plane.normal.y, plane.normal.z]
 				var n_node = edit_poly.create_child('n', normal)
-				var distance_node = edit_poly.create_child('dist', "%.6f" % plane.distance)
+				
+				var distance_node = edit_poly.create_child('dist', plane.distance)
 				
 				var texture_index = 0
 				var texture_name = "missing_texture"  # Default-Wert
@@ -439,17 +450,18 @@ class LTAWriter:
 					texture_name = "missing_texture"
 					
 				var texture_info_node = edit_poly.create_child('textureinfo')
-				func format_vec3(v):
-					return ["%.6f" % v.x, "%.6f" % v.y, "%.6f" % v.z]
+				
 
 				if "uv1" in poly and poly.uv1 != null:
-					texture_info_node.create_property(format_vec3(poly.uv1))
-					texture_info_node.create_property(format_vec3(poly.uv2))
-					texture_info_node.create_property(format_vec3(poly.uv3))
+					texture_info_node.create_property([poly.uv1.x, poly.uv1.y, poly.uv1.z])
+					texture_info_node.create_property([poly.uv2.x, poly.uv2.y, poly.uv2.z])
+					texture_info_node.create_property([poly.uv3.x, poly.uv3.y, poly.uv3.z])
+					
 				else:
-					texture_info_node.create_property(format_vec3(surface.uv1))
-					texture_info_node.create_property(format_vec3(surface.uv2))
-					texture_info_node.create_property(format_vec3(surface.uv3))
+					texture_info_node.create_property([surface.uv1.x, surface.uv1.y, surface.uv1.z])
+					texture_info_node.create_property([surface.uv2.x, surface.uv2.y, surface.uv2.z])
+					texture_info_node.create_property([surface.uv3.x, surface.uv3.y, surface.uv3.z])
+
 				
 				texture_info_node.create_child('sticktopoly', 1)
 				texture_info_node.create_child('name', texture_name)
@@ -481,19 +493,13 @@ class LTAWriter:
 				var prop_list = global_prop_container.create_child('proplist').create_container()
 				prop_list.create_prop_entry('string', 'Name', "Brush_" + world_model.world_name + "_" + str(running_prop_id))
 				
-				var pos_node = prop_list.create_child('vector', 'Pos')
-				pos_node.create_child('data').create_child('vector', [
-					"%.6f" % node.pos.x,
-					"%.6f" % node.pos.y,
-					"%.6f" % node.pos.z
-				])
+				var pos_prop = prop_list.create_prop_entry('vector', 'Pos', null)
+				pos_prop.create_property('vector')
+				pos_prop.create_property(Vector3(0.0, 0.0, 0.0))
 
-				var rot_node = prop_list.create_child('rotation', 'Rotation')
-				rot_node.create_child('data').create_child('eulerangles', [
-					"%.6f" % node.rotation.x,
-					"%.6f" % node.rotation.y,
-					"%.6f" % node.rotation.z
-])
+				var rot_prop = prop_list.create_prop_entry('rotation', 'Rotation', null)
+				rot_prop.create_property('eulerangles')
+				rot_prop.create_property(Vector3(0.0, 0.0, 0.0))
 				
 				# Holy heck!
 				prop_list.create_prop_entry('bool', 'Solid', int( surface.flags & (1<<0) != 0 ))
