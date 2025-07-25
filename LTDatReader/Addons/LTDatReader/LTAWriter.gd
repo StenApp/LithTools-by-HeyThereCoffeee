@@ -64,12 +64,21 @@ class LTANode:
 		# item.create_container()
 		# return item.create_child('data', data)
 
+	# func create_prop_entry(type, name, data):
+		# var item = self.create_child(type, name)
+		# item.create_container()
+		# if data != null:
+			# item.create_child('data', data)
+		# return item
+		
 	func create_prop_entry(type, name, data):
 		var item = self.create_child(type, name)
 		item.create_container()
+		if PROP_LABELS.has(name):
+			item.create_child(PROP_LABELS[name])
 		if data != null:
 			item.create_child('data', data)
-		return item
+		return item	
 		
 	# Loop through all the children and write out their props and depth
 	func serialize():
@@ -101,6 +110,18 @@ class LTANode:
 
 		return output_string
 
+	func create_vector_node(values: Vector3):
+		var node = LTANode.new('vector')
+		node._children.append(LTANode.new('', [values.x, values.y, values.z]))
+		self._children.append(node)
+		return node
+
+	func create_eulerangles_node(values: Vector3):
+		var node = LTANode.new('eulerangles')
+		node._children.append(LTANode.new('', [values.x, values.y, values.z]))
+		self._children.append(node)
+		return node
+	
 	func _write_depth():
 		var output_string = ""
 		for _i in range(self._depth):
@@ -321,19 +342,13 @@ class LTAWriter:
 					var data = prop.get_lta_property_data()
 					if data == null:
 						continue
+					# End if
 					
-					var prop_label = PROP_LABELS.get(data[1], null)
-
 					if len(data) == 3:
 						var node = prop_list.create_prop_entry(data[0], data[1], data[2])
-						if prop_label:
-							node.create_child(prop_label)
 					else:
 						var node = prop_list.create_prop_entry(data[0], data[1], null)
-						if prop_label:
-							node.create_child(prop_label)
 						node.create_property(data[2]).create_property(data[3])
-
 					# End If
 				# End For
 				
@@ -492,14 +507,16 @@ class LTAWriter:
 				# Create the proplist entry
 				var prop_list = global_prop_container.create_child('proplist').create_container()
 				prop_list.create_prop_entry('string', 'Name', "Brush_" + world_model.world_name + "_" + str(running_prop_id))
-				
-				var pos_prop = prop_list.create_prop_entry('vector', 'Pos', null)
-				pos_prop.create_property('vector')
-				pos_prop.create_property(Vector3(0.0, 0.0, 0.0))
 
-				var rot_prop = prop_list.create_prop_entry('rotation', 'Rotation', null)
-				rot_prop.create_property('eulerangles')
-				rot_prop.create_property(Vector3(0.0, 0.0, 0.0))
+				var pos_prop = prop_list.create_child('vector', 'Pos')
+				pos_prop.create_container()
+				var pos_data = pos_prop.create_child('data')
+				pos_data.create_vector_node(Vector3(0.0, 0.0, 0.0))
+
+				var rot_prop = prop_list.create_child('rotation', 'Rotation')
+				rot_prop.create_container()
+				var rot_data = rot_prop.create_child('data')
+				rot_data.create_eulerangles_node(Vector3(0.0, 0.0, 0.0))
 				
 				# Holy heck!
 				prop_list.create_prop_entry('bool', 'Solid', int( surface.flags & (1<<0) != 0 ))
