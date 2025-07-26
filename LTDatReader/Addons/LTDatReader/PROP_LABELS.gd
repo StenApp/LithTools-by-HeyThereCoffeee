@@ -1,4 +1,5 @@
 const PROP_LABELS = {
+	"SkyDims": "dims",
     "Filename": "filename",
     "Skin": "filename",
     "SoundRadius": "radius",

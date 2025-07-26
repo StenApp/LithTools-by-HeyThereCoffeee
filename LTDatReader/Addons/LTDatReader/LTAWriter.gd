@@ -71,14 +71,28 @@ class LTANode:
 			# item.create_child('data', data)
 		# return item
 		
+	# func create_prop_entry(type, name, data):
+		# var item = self.create_child(type, name)
+		# item.create_container()
+		# if PROP_LABELS.has(name):
+			# item.create_child(PROP_LABELS[name])
+		# if data != null:
+			# item.create_child('data', data)
+		# return item	
+	
+
 	func create_prop_entry(type, name, data):
 		var item = self.create_child(type, name)
 		item.create_container()
+		# Immer Label anlegen
 		if PROP_LABELS.has(name):
 			item.create_child(PROP_LABELS[name])
+		else:
+			item.create_child("")  # damit ( ) geschrieben wird
 		if data != null:
 			item.create_child('data', data)
-		return item	
+		return item
+
 		
 	# Loop through all the children and write out their props and depth
 	func serialize():
@@ -511,7 +525,7 @@ class LTAWriter:
 				var pos_prop = prop_list.create_child('vector', 'Pos')
 				pos_prop.create_container()
 				var pos_data = pos_prop.create_child('data')
-				pos_data.create_vector_node(Vector3(0.0, 0.0, 0.0))
+				pos_data.create_vector_node(world_model.world_translation)
 
 				var rot_prop = prop_list.create_child('rotation', 'Rotation')
 				rot_prop.create_container()
@@ -540,10 +554,10 @@ class LTAWriter:
 				prop_list.create_prop_entry('bool', 'TimeOfDay', int( surface.flags & (1<<20) != 0 ))
 				prop_list.create_prop_entry('bool', 'VisBlocker', int( surface.flags & (1<<21) != 0 ))
 				prop_list.create_prop_entry('bool', 'NotAStep', int( surface.flags & (1<<22) != 0 ))
-				prop_list.create_prop_entry('bool', 'NoWallWalk', int( surface.flags & (1<<23) != 0 ))
+				#prop_list.create_prop_entry('bool', 'NoWallWalk', int( surface.flags & (1<<23) != 0 ))
 				#prop_list.create_prop_entry('bool', 'BlockLight', int( surface.flags & (1<<24) == 0 ))
-				var block_light = int(surface.flags & (1 << 30) != 0)
-				prop_list.create_prop_entry('bool', 'BlockLight', block_light)
+				# var block_light = int(surface.flags & (1 << 30) != 0)
+				# prop_list.create_prop_entry('bool', 'BlockLight', block_light)
 
 				prop_list.create_prop_entry('longint', 'DetailLevel', 0)
 				#prop_list.create_prop_entry('string', 'Effect', '')
