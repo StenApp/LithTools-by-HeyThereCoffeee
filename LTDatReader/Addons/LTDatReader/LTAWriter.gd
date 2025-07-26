@@ -71,27 +71,15 @@ class LTANode:
 			# item.create_child('data', data)
 		# return item
 		
-	# func create_prop_entry(type, name, data):
-		# var item = self.create_child(type, name)
-		# item.create_container()
-		# if PROP_LABELS.has(name):
-			# item.create_child(PROP_LABELS[name])
-		# if data != null:
-			# item.create_child('data', data)
-		# return item	
-	
-
 	func create_prop_entry(type, name, data):
 		var item = self.create_child(type, name)
 		item.create_container()
-		# Immer Label anlegen
 		if PROP_LABELS.has(name):
 			item.create_child(PROP_LABELS[name])
-		else:
-			item.create_child("")  # damit ( ) geschrieben wird
 		if data != null:
 			item.create_child('data', data)
-		return item
+		return item	
+	
 
 		
 	# Loop through all the children and write out their props and depth
