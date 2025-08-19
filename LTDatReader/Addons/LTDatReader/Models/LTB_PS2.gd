@@ -409,21 +409,23 @@ class LTB_PS2:
 		class DiskVert:
 			var vertex_index = 0
 			var dummy = []
+			var unknown_float_1 = 0.0  # Diese Zeile hinzufügen
+			var unknown_float_2 = 0.0  # Diese Zeile hinzufügen
 			
 			func read(ltb: LTB_PS2, f : File, is_packed = false):
 				if is_packed == true:
 					self.vertex_index = f.get_32()
+					self.unknown_float_1 = 0.0  # Für packed vertices setzen
+					self.unknown_float_2 = 0.0
 					return
-				# End
 				
 				self.vertex_index = f.get_16()	
 				self.dummy = Array(f.get_buffer(2))
 				
-				var unknown_float_1 = f.get_float()
-				var unknown_float_2 = f.get_float()
+				self.unknown_float_1 = f.get_float()  # self. hinzufügen
+				self.unknown_float_2 = f.get_float()  # self. hinzufügen
 				
 				var unk = f.get_float()
-				
 				var hack = f.get_32()
 				
 				if hack < 60000 or hack == 4294967295: # -1
@@ -473,8 +475,8 @@ class LTB_PS2:
 		# hack
 		var texture_index = 0
 		
-		var uv_offset_1 = 0.0
-		var uv_offset_2 = 0.0
+		var unknown5 = 0.0 #uv_offset_1
+		var unknown6 = 0.0 #uv_offset_2
 		
 		var lightmap_texture = null
 		
@@ -493,11 +495,11 @@ class LTB_PS2:
 			#var polygon_index = f.get_32()
 			
 			
-			self.uv_offset_1 = f.get_float()
+			self.unknown5 = f.get_float()
 			
 			self.center = ltb.read_vector3(f)
 			
-			self.uv_offset_2 = f.get_float() 
+			self.unknown6 = f.get_float() 
 			
 			var surface = surfaces[self.surface_index]
 			

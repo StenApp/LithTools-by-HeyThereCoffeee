@@ -271,6 +271,29 @@ func get_texture(tex_name):
 func clear_texture_cache():	
 	cached_textures.clear()
 
+# func calculate_polygon_uv_origin(surface_uv1: Vector3, surface_uv2: Vector3, surface_uv3: Vector3, polygon_center: Vector3, plane_normal: Vector3, plane_distance: float):
+	# # Godot 3.5 kompatibel
+	# var p_normalized = surface_uv2.normalized()
+	# var q_normalized = surface_uv3.normalized()
+	
+	# # Berechne Offset vom Surface-Origin zum Polygon-Center
+	# var offset = polygon_center - surface_uv1
+	
+	# # Projiziere auf P/Q-Achsen
+	# var u_offset = offset.dot(p_normalized)
+	# var v_offset = offset.dot(q_normalized)
+	
+	# # Runde auf ganze UV-Einheiten (verhindert Textur-Versatz)
+	# var u_grid = round(u_offset * surface_uv2.length())
+	# var v_grid = round(v_offset * surface_uv3.length())
+	
+	# # Berechne neuen Origin
+	# var p_part = p_normalized * u_grid / surface_uv2.length()
+	# var q_part = q_normalized * v_grid / surface_uv3.length()
+	# var corrected_origin = surface_uv1 + p_part + q_part
+	
+	# return corrected_origin
+
 
 # TODO: Also need to handle shifting? https://github.com/Shfty/libmap/blob/6e4160924cf5373e67e8f35422b196e6e0eaa52c/src/c/geo_generator.c
 # Enhanced OPQ to UV mapping algorithm for LithTech world geometry
@@ -346,38 +369,39 @@ func transform_surface_vectors_to_plane(surface_p: Vector3, surface_q: Vector3, 
 	Transform surface vectors to work correctly with this polygon's plane orientation.
 	Handles angled surfaces and maintains proper texture orientation.
 	"""
-	
+
 	var transformed_p = surface_p
 	var transformed_q = surface_q
-	
+
 	# Check if vectors are perpendicular to plane normal (they should be)
 	var p_dot_normal = abs(surface_p.dot(plane_normal))
 	var q_dot_normal = abs(surface_q.dot(plane_normal))
 	var p_dot_q = abs(surface_p.normalized().dot(surface_q.normalized()))
-	
+
 	# Fix vectors that aren't in the plane
 	if p_dot_normal > 0.1:
 		# P vector is not in the plane - project it
 		transformed_p = (surface_p - plane_normal * surface_p.dot(plane_normal)).normalized() * surface_p.length()
-		
+
 		# Alternative: Generate new P vector perpendicular to normal and Q
 		if surface_q.cross(plane_normal).length() > 0.1:
 			transformed_p = surface_q.cross(plane_normal).normalized() * surface_p.length()
-	
+
 	if q_dot_normal > 0.1:
 		# Q vector is not in the plane - project it  
 		transformed_q = (surface_q - plane_normal * surface_q.dot(plane_normal)).normalized() * surface_q.length()
-		
+
 		# Alternative: Generate new Q vector perpendicular to normal and P
 		if plane_normal.cross(transformed_p).length() > 0.1:
 			transformed_q = plane_normal.cross(transformed_p).normalized() * surface_q.length()
-	
+
 	# Ensure P and Q are perpendicular to each other
 	if p_dot_q > 0.1:
 		# Re-orthogonalize Q relative to P, keeping it in the surface plane
 		transformed_q = plane_normal.cross(transformed_p).normalized() * surface_q.length()
-	
+
 	return [transformed_p, transformed_q]
+
 
 func is_axis_aligned_plane(plane_normal: Vector3) -> bool:
 	"""
@@ -389,14 +413,15 @@ func is_axis_aligned_plane(plane_normal: Vector3) -> bool:
 		   (abs(plane_normal.z) > 0.9 and abs(plane_normal.x) < threshold and abs(plane_normal.y) < threshold)
 
 func should_debug_texture(texture_name: String) -> bool:
-	"""
-	Enable debug output for specific problematic textures
-	"""
-	var debug_textures = ["wd0296", "trobj0008", "st1003", "st1004"]
-	for debug_tex in debug_textures:
-		if texture_name.find(debug_tex) >= 0:
-			return true
-	return false
+	# """
+	# Enable debug output for specific problematic textures
+	# """
+	# var debug_textures = ["wd0296", "trobj0008", "st1003", "st1004"]
+	# for debug_tex in debug_textures:
+		# if texture_name.find(debug_tex) >= 0:
+			# return true
+	# return false
+	return true
 
 func debug_uv_calculation(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, polygon_center: Vector3, plane_normal: Vector3, uv_origin: Vector3, local_p: Vector3, local_q: Vector3, u: float, v: float, texture_name: String):
 	"""
@@ -717,6 +742,21 @@ func fill_array_mesh(model, world_models = []):
 	for world_model_index in range(len(world_models)):
 		var world_model = world_models[world_model_index]
 		
+#		# Filter: Nur PhysicsBSP anzeigen
+#		if world_model.world_name != "PhysicsBSP":
+#			print("Skipping " + world_model.world_name)
+#			continue
+		
+		if world_model.world_name == "VisBSP":
+			print("Skipping " + world_model.world_name)
+			continue
+
+		# if world_model.world_name == "PhysicsBSP":
+			# print("Skipping " + world_model.world_name)
+			# continue
+		
+		print("Processing " + world_model.world_name)
+		
 		var verts = []
 		var uvs = []
 		var uvs2 = []
@@ -725,9 +765,7 @@ func fill_array_mesh(model, world_models = []):
 		var indices = PoolIntArray()
 		var polies = []
 		
-		if world_model.world_name == "VisBSP":
-			print("Skipping " + world_model.world_name)
-			continue
+#		
 
 		# Lightmap setup (keeping existing code)
 		var total_lms = 0
@@ -761,14 +799,16 @@ func fill_array_mesh(model, world_models = []):
 			
 			#texture_name = world_model.texture_names[texture_index].name
 			if texture_index >= 0 and texture_index < model.texture_list.size():
-				texture_name = model.texture_list[texture_index]
+				texture_name = model.texture_list[texture_index].to_lower()
 			else:
 				push_error("Ungültiger Texturindex: %d" % texture_index)
 				texture_name = "nothing.dtx"
 			
+			print("World '", world_model.world_name, "' - Polygon ", poly_index, " verwendet Textur: ", texture_name, " (Index: ", texture_index, ")")
+			
 			var tex = get_texture(texture_name)
-			var tex_width = 256
-			var tex_height = 256
+			var tex_width = 64
+			var tex_height = 64
 			
 			if tex != null:
 				tex_width = tex.get_width()
@@ -826,15 +866,24 @@ func fill_array_mesh(model, world_models = []):
 					var colour = Color(normalized.x, normalized.y, normalized.z, 1.0)
 					colours.append(colour)
 				
-				# Simple UV calculation using the function
-				#var final_uv = opq_to_uv(vert, O, P, Q, polygon_center, plane.normal, texture_name, tex_width, tex_height)
-				#var final_uv = opq_to_uv(vert, O, P, Q, polygon_center, plane.normal, plane.distance, texture_name, tex_width, tex_height)
+				# Prüfe Surface-Flags für packed format
+				surface = world_model.surfaces[poly.surface_index]
+				var is_packed = (surface.flags & (1 << 2)) != 0
 
-				var uv_result = opq_to_uv_adaptive(vert, O, P, Q, polygon_center, plane.normal, plane.distance, poly.surface_index, world_model.surface_count, texture_name, tex_width, tex_height)
+				var uv_result  # Hier deklarieren, außerhalb der if/else-Blöcke
 
-				uvs.append(uv_result.uv)
+				if is_packed:
+					print("USING OPQ for packed vertex - Surface flags: 0x%X, Texture: %s" % [surface.flags, texture_name])
+					uv_result = opq_to_uv_adaptive(vert, O, P, Q, polygon_center, plane.normal, plane.distance, poly.surface_index, world_model.surface_count, texture_name, tex_width, tex_height)
+					uvs.append(uv_result.uv)
+				else:
+					print("USING Unknown2 UVs - Surface flags: 0x%X, UV: (%.3f, %.3f), Texture: %s" % [surface.flags, disk_vert.unknown_float_1, disk_vert.unknown_float_2, texture_name])
+					var final_uv = Vector2(disk_vert.unknown_float_1, disk_vert.unknown_float_2)
+					uvs.append(final_uv)
+					# Erstelle dummy uv_result für konsistente Datenstruktur
+					uv_result = {"uv": final_uv, "O": O, "P": P, "Q": Q}
 
-				# Mini-Hook: OPQ-Update for LTA exporter to fix stripes instead of textures
+				# Jetzt kann auf uv_result zugegriffen werden
 				poly.uv1 = uv_result.O
 				poly.uv2 = uv_result.P
 				poly.uv3 = uv_result.Q
