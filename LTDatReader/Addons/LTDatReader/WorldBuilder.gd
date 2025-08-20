@@ -271,29 +271,6 @@ func get_texture(tex_name):
 func clear_texture_cache():	
 	cached_textures.clear()
 
-# func calculate_polygon_uv_origin(surface_uv1: Vector3, surface_uv2: Vector3, surface_uv3: Vector3, polygon_center: Vector3, plane_normal: Vector3, plane_distance: float):
-	# # Godot 3.5 kompatibel
-	# var p_normalized = surface_uv2.normalized()
-	# var q_normalized = surface_uv3.normalized()
-	
-	# # Berechne Offset vom Surface-Origin zum Polygon-Center
-	# var offset = polygon_center - surface_uv1
-	
-	# # Projiziere auf P/Q-Achsen
-	# var u_offset = offset.dot(p_normalized)
-	# var v_offset = offset.dot(q_normalized)
-	
-	# # Runde auf ganze UV-Einheiten (verhindert Textur-Versatz)
-	# var u_grid = round(u_offset * surface_uv2.length())
-	# var v_grid = round(v_offset * surface_uv3.length())
-	
-	# # Berechne neuen Origin
-	# var p_part = p_normalized * u_grid / surface_uv2.length()
-	# var q_part = q_normalized * v_grid / surface_uv3.length()
-	# var corrected_origin = surface_uv1 + p_part + q_part
-	
-	# return corrected_origin
-
 
 # TODO: Also need to handle shifting? https://github.com/Shfty/libmap/blob/6e4160924cf5373e67e8f35422b196e6e0eaa52c/src/c/geo_generator.c
 # Enhanced OPQ to UV mapping algorithm for LithTech world geometry
@@ -481,21 +458,136 @@ func opq_to_uv_adaptive(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, pol
 	else:
 		return opq_to_uv_enhanced(vertex, o, p, q, polygon_center, plane_normal, plane_distance, surface_index, texture_name, tex_width, tex_height)
 
-# Integration point: Replace your existing opq_to_uv function with this call
-func opq_to_uv(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, polygon_center: Vector3, plane_normal: Vector3, plane_distance: float, texture_name: String, tex_width = 64.0, tex_height = 64.0):
-	"""
-	Main entry point - integrates with your existing code
-	Add surface_index and surface_count parameters when available
-	"""
-	
-	# For now, use the enhanced algorithm for all cases
-	# You can optimize this later by detecting geometry complexity
-	return opq_to_uv_enhanced(vertex, o, p, q, polygon_center, plane_normal, plane_distance, 0, texture_name, tex_width, tex_height)
-	
+# Für PC/Standard - einfache orthogonale OPQ
+func opq_to_uv_pc(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, tex_width = 128.0, tex_height = 128.0):
+	var point = vertex - o
+	var u = point.dot(p) / tex_width
+	var v = point.dot(q) / tex_height
+	return Vector2(u, v)
+
+
+# Für PS2 - komplexe Transformation (deine bestehende enhanced Version)
+func opq_to_uv_ps2(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, polygon_center: Vector3, plane_normal: Vector3, plane_distance: float, texture_name: String, tex_width = 64.0, tex_height = 64.0):
+	return opq_to_uv_enhanced(vertex, o, p, q, polygon_center, plane_normal, plane_distance, 0, texture_name, tex_width, tex_height)	
 
 func get_vert_uv( vert : Vector3, poly_u : Vector3, poly_v : Vector3, lm_width, lm_height ):
 	#return Vector2( vert.dot(poly_u), vert.dot(poly_v) )
 	return Vector2( vert.dot(poly_u) / (lm_width), vert.dot(poly_v) / (lm_height) )
+	
+# UV to OPQ conversion based on LithTech's original uvtoopq.cpp
+# Reference: uvtoopq.cpp - ConvertUVToOPQ function
+func convert_uv_to_opq_lithtech_original(poly, world_model, model, tex_width: int, tex_height: int) -> Dictionary:
+	"""
+	Converts UV coordinates to OPQ vectors using LithTech's original algorithm.
+	Based on uvtoopq.cpp - uses first 3 vertices only, regardless of polygon complexity.
+	"""
+	
+	if poly.disk_verts.size() < 3:
+		push_error("Polygon has fewer than 3 vertices")
+		return {"O": Vector3.ZERO, "P": Vector3.RIGHT, "Q": Vector3.UP}
+	
+	# Following uvtoopq.cpp approach: use first 3 vertices only
+	var positions = []
+	var uv_coords = []
+	
+	for i in range(3):  # Hardcoded to 3 as in original uvtoopq.cpp
+		var disk_vert = poly.disk_verts[i]
+		var world_pos = world_model.points[disk_vert.vertex_index]
+		var uv = Vector2(disk_vert.unknown_float_1, disk_vert.unknown_float_2)
+		
+		positions.append(world_pos)
+		uv_coords.append(uv)
+	
+	# Call the ported uvtoopq.cpp algorithm
+	return convert_uv_to_opq(positions, uv_coords, tex_width, tex_height)	
+
+# UV to OPQ Converter - Godot port of LithTech's original algorithm
+# Based on uvtoopq.cpp
+static func bary_coords_area(p0: Vector3, p1: Vector3, p2: Vector3) -> float:
+	var e0 = p1 - p0
+	var e1 = p2 - p0
+	return (e0.x * e1.y - e1.x * e0.y)
+
+static func bary_coords(p0: Vector3, p1: Vector3, p2: Vector3, p: Vector3) -> Vector3:
+	var n = bary_coords_area(p0, p1, p2)
+	if abs(n) < 0.001:
+		return Vector3(1.0, 0.0, 0.0)
+	var u = bary_coords_area(p1, p2, p) / n
+	var v = bary_coords_area(p2, p0, p) / n
+	var w = 1.0 - u - v
+	return Vector3(u, v, w)
+
+static func convert_uv_to_opq(positions: Array, uv_coords: Array, tex_width: int, tex_height: int) -> Dictionary:
+	"""
+	Sets up OPQs based on UV coordinates for each vertex
+	Based on uvtoopq.cpp - ConvertUVToOPQ function
+	"""
+	if positions.size() != 3 or uv_coords.size() != 3:
+		push_error("convert_uv_to_opq: Benötigt genau 3 Positionen und 3 UV-Koordinaten")
+		return {"O": Vector3.ZERO, "P": Vector3.RIGHT, "Q": Vector3.UP}
+	
+	# vertex positions in texture space (Y-flip wie in uvtoopq.cpp)
+	var tv0 = Vector3(uv_coords[0].x, uv_coords[0].y, 0.0)
+	var tv1 = Vector3(uv_coords[1].x, uv_coords[1].y, 0.0)
+	var tv2 = Vector3(uv_coords[2].x, uv_coords[2].y, 0.0)
+	
+	# vertex positions in world space
+	var v0 = positions[0]
+	var v1 = positions[1]
+	var v2 = positions[2]
+	
+	# determine barycentric coordinates of OPQ in texture space
+	var bc_o = bary_coords(tv0, tv1, tv2, Vector3(0.0, 0.0, 0.0))
+	var bc_p = bary_coords(tv0, tv1, tv2, Vector3(1.0, 0.0, 0.0))
+	var bc_q = bary_coords(tv0, tv1, tv2, Vector3(0.0, 1.0, 0.0))
+	
+	# calculate OPQ in world space
+	var O = bc_o.x * v0 + bc_o.y * v1 + bc_o.z * v2
+	var P = bc_p.x * v0 + bc_p.y * v1 + bc_p.z * v2
+	var Q = bc_q.x * v0 + bc_q.y * v1 + bc_q.z * v2
+	
+	P = P - O
+	Q = Q - O
+	
+	# Scale factors (wie in uvtoopq.cpp)
+	var tp = P.length()
+	tp *= 1.0 / float(tex_width)
+	tp = 1.0 / tp if tp > 0.001 else 1.0
+	
+	var tq = Q.length()
+	tq *= 1.0 / float(tex_height)
+	tq = 1.0 / tq if tq > 0.001 else 1.0
+	
+	P = P.normalized()
+	Q = Q.normalized()
+	
+	# Fix up P and Q to be what DEdit really wants (orthogonalization)
+	var R = Q.cross(P)
+	var P_new = R.cross(Q)
+	var Q_new = P.cross(R)
+	
+	# Fix up scale factors for new P and Q
+	P_new = P_new.normalized()
+	Q_new = Q_new.normalized()
+	
+	var p_scale = 1.0 / P.dot(P_new) if abs(P.dot(P_new)) > 0.001 else 1.0
+	var q_scale = 1.0 / Q.dot(Q_new) if abs(Q.dot(Q_new)) > 0.001 else 1.0
+	
+	R = Q_new.cross(P_new)
+	
+	P_new *= tp * p_scale
+	Q_new *= tq * q_scale
+	
+	# Orthogonalize P and Q (final step)
+	R = R.normalized()
+	P = P_new + R
+	Q = Q_new - (P_new.dot(Q_new) * R)
+	
+	return {
+		"O": O,
+		"P": P, 
+		"Q": Q
+	}
 
 func build_array_mesh(textured_meshes):
 	var st = SurfaceTool.new()
@@ -832,26 +924,38 @@ func fill_array_mesh(model, world_models = []):
 				depth_uv = last_lm_uv
 				last_lm_uv.x += lm_image.get_width()
 			
-			# Get OPQ vectors for this polygon
+			# OPQ-Vektoren pro Polygon bestimmen
 			var O: Vector3
 			var P: Vector3  
 			var Q: Vector3
-
+			var calculation_method: String
+			
 			if model.PLATFORM == "PS2":
 				O = poly.uv1
 				P = poly.uv2
 				Q = poly.uv3
-			elif model.PLATFORM == "PC" and (model.is_lithtech_1() or model.is_lithtech_2()):
-				O = surface.uv1
-				P = surface.uv2
-				Q = surface.uv3
+				
+				var is_packed = (surface.flags & (1 << 2)) != 0
+				if is_packed:
+					calculation_method = "ps2_opq"
+					print("POLYGON %d USING OPQ - Surface flags: 0x%X" % [poly_index, surface.flags])
+				else:
+					calculation_method = "ps2_direct"
+					print("POLYGON %d USING DIRECT UVs - Surface flags: 0x%X" % [poly_index, surface.flags])
 			else:
-				O = poly.uv1
-				P = poly.uv2
-				Q = poly.uv3
-
+				# PC/DAT: Hole OPQ je nach LithTech-Version
+				if model.PLATFORM == "PC" and (model.is_lithtech_1() or model.is_lithtech_2()):
+					O = surface.uv1
+					P = surface.uv2
+					Q = surface.uv3
+				else:
+					O = poly.uv1
+					P = poly.uv2
+					Q = poly.uv3
+				calculation_method = "pc_simple"  # FIX: Für alle PC-Pfade setzen
 
 			var polygon_center = Vector3(poly.center.x, poly.center.y, poly.center.z)
+			var last_uv_result = {}  # FIX: Variable definieren
 			
 			# Process each vertex
 			for disk_vert_index in range(len(poly.disk_verts)):
@@ -866,27 +970,34 @@ func fill_array_mesh(model, world_models = []):
 					var colour = Color(normalized.x, normalized.y, normalized.z, 1.0)
 					colours.append(colour)
 				
-				# Prüfe Surface-Flags für packed format
-				surface = world_model.surfaces[poly.surface_index]
-				var is_packed = (surface.flags & (1 << 2)) != 0
+				# UV-Berechnung basierend auf Polygon-Methode
+				match calculation_method:
+					"ps2_opq":
+						var uv_result = opq_to_uv_adaptive(vert, O, P, Q, polygon_center, plane.normal, plane.distance, poly.surface_index, world_model.surface_count, texture_name, tex_width, tex_height)
+						uvs.append(uv_result.uv)
+						last_uv_result = uv_result  # FIX: Sammeln für OPQ-Speicherung
+					"ps2_direct":
+						var uv = Vector2(disk_vert.unknown_float_1, disk_vert.unknown_float_2)
+						uvs.append(uv)
+					"pc_simple":
+						var uv = opq_to_uv_pc(vert, O, P, Q, tex_width, tex_height)
+						uvs.append(uv)
 
-				var uv_result  # Hier deklarieren, außerhalb der if/else-Blöcke
-
-				if is_packed:
-					print("USING OPQ for packed vertex - Surface flags: 0x%X, Texture: %s" % [surface.flags, texture_name])
-					uv_result = opq_to_uv_adaptive(vert, O, P, Q, polygon_center, plane.normal, plane.distance, poly.surface_index, world_model.surface_count, texture_name, tex_width, tex_height)
-					uvs.append(uv_result.uv)
-				else:
-					print("USING Unknown2 UVs - Surface flags: 0x%X, UV: (%.3f, %.3f), Texture: %s" % [surface.flags, disk_vert.unknown_float_1, disk_vert.unknown_float_2, texture_name])
-					var final_uv = Vector2(disk_vert.unknown_float_1, disk_vert.unknown_float_2)
-					uvs.append(final_uv)
-					# Erstelle dummy uv_result für konsistente Datenstruktur
-					uv_result = {"uv": final_uv, "O": O, "P": P, "Q": Q}
-
-				# Jetzt kann auf uv_result zugegriffen werden
-				poly.uv1 = uv_result.O
-				poly.uv2 = uv_result.P
-				poly.uv3 = uv_result.Q
+			# Nach der Vertex-Schleife: OPQ-Speicherung
+			if model.PLATFORM == "PS2":
+				match calculation_method:
+					"ps2_opq":
+						# FIX: Verwende gesammelte korrigierte OPQ-Werte
+						poly.uv1 = last_uv_result.O
+						poly.uv2 = last_uv_result.P
+						poly.uv3 = last_uv_result.Q
+					"ps2_direct":
+						# FIX: UV→OPQ-Konvertierung mit korrigierter Funktion
+						var opq_result = convert_uv_to_opq_lithtech_original(poly, world_model, model, tex_width, tex_height)
+						poly.uv1 = opq_result.O
+						poly.uv2 = opq_result.P
+						poly.uv3 = opq_result.Q
+			# PC: Keine Aktualisierung nötig	
 			
 			# Lightmap UV calculation (keeping existing code unchanged)
 			if lm_image != null and lm_image.get_width() > 0 and lm_image.get_height() > 0:
