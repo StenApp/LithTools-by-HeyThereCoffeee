@@ -327,6 +327,7 @@ class LTAWriter:
 					
 				var obj_node = object_children.create_child('worldnode')
 				obj_node.create_child('type', "___object")
+				obj_node.create_child('label', world_object.name) #label to update objects properly in DEdit
 				obj_node.create_child('nodeid', running_node_id)
 				obj_node.create_child('flags').create_container()
 				var node_props = obj_node.create_child('properties')
