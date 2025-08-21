@@ -526,7 +526,7 @@ static func convert_uv_to_opq(positions: Array, uv_coords: Array, tex_width: int
 		push_error("convert_uv_to_opq: Benötigt genau 3 Positionen und 3 UV-Koordinaten")
 		return {"O": Vector3.ZERO, "P": Vector3.RIGHT, "Q": Vector3.UP}
 	
-	# vertex positions in texture space (Y-flip wie in uvtoopq.cpp)
+	# vertex positions in texture space (OHNE Y-flip wie in uvtoopq.cpp)
 	var tv0 = Vector3(uv_coords[0].x, uv_coords[0].y, 0.0)
 	var tv1 = Vector3(uv_coords[1].x, uv_coords[1].y, 0.0)
 	var tv2 = Vector3(uv_coords[2].x, uv_coords[2].y, 0.0)

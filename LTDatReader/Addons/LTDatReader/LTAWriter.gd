@@ -79,7 +79,6 @@ class LTANode:
 		if data != null:
 			item.create_child('data', data)
 		return item	
-	
 
 		
 	# Loop through all the children and write out their props and depth
@@ -350,7 +349,15 @@ class LTAWriter:
 						var node = prop_list.create_prop_entry(data[0], data[1], data[2])
 					else:
 						var node = prop_list.create_prop_entry(data[0], data[1], null)
-						node.create_property(data[2]).create_property(data[3])
+						if data[2] == "___vector" or data[2] == "___eulerangles":
+							var data_node = node.create_child('data')
+							if data[2] == "___vector":
+								data_node.create_vector_node(data[3])
+							else:  # eulerangles
+								data_node.create_eulerangles_node(data[3])
+						else:
+							# Andere 4-Werte Properties
+							node.create_property(data[2]).create_property(data[3])
 					# End If
 				# End For
 				
@@ -513,7 +520,7 @@ class LTAWriter:
 				var pos_prop = prop_list.create_child('vector', 'Pos')
 				pos_prop.create_container()
 				var pos_data = pos_prop.create_child('data')
-				pos_data.create_vector_node(world_model.world_translation)
+				pos_data.create_vector_node(Vector3(0.0, 0.0, 0.0))
 
 				var rot_prop = prop_list.create_child('rotation', 'Rotation')
 				rot_prop.create_container()
