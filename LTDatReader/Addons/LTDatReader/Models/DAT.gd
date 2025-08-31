@@ -49,6 +49,8 @@ class DAT:
 	var current_poly_index = 0
 	var current_world_model_index = 0
 	
+	var texture_list = []
+	
 	func _init():
 		pass
 	# End Func
@@ -175,6 +177,13 @@ class DAT:
 			return self._make_response(IMPORT_RETURN.PARTIAL)
 
 		world_model_batch_read(f, self.world_model_count)
+		
+		# Konsolidiere alle Texturen aus allen World Models in eine einzige Liste
+		self.texture_list = []
+		for world_model in self.world_models:
+			for tex_name in world_model.texture_list:
+				if not tex_name in self.texture_list:
+					self.texture_list.append(tex_name)
 
 		return self._make_response(IMPORT_RETURN.SUCCESS)
 		
@@ -819,6 +828,7 @@ class DAT:
 		var texture_count = 0
 		
 		# Lists
+		var texture_names = [] 
 		var texture_list = []
 		var verts = []
 		var points = []
@@ -876,15 +886,28 @@ class DAT:
 			self.name_length = f.get_32()
 			self.texture_count = f.get_32()
 			
-			# We can maybe de-class this
+			# # We can maybe de-class this
+			# for _i in range(self.texture_count):
+				# var texture = WorldTexture.new()
+				# texture.read(dat, f)
+				# self.texture_list.append(texture.name)
+				# # var texture = WorldTexture.new()
+				# # texture.read(dat, f)
+				# # self.texture_names.append(texture)
+			# # End If
+			
+			# NEUE VERSION (wie PS2):
+			self.texture_names = []  # Neue Variable hinzufügen
 			for _i in range(self.texture_count):
 				var texture = WorldTexture.new()
 				texture.read(dat, f)
 				self.texture_list.append(texture.name)
-				# var texture = WorldTexture.new()
-				# texture.read(dat, f)
-				# self.texture_names.append(texture)
-			# End If
+				
+				# Zusätzlich für Kompatibilität:
+				var world_texture = WorldTexture.new()
+				world_texture.name = texture.name
+				self.texture_names.append(world_texture)
+			
 			
 			# Not sure why it's poly count..
 			for _i in range(self.poly_count):

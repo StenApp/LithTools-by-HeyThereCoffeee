@@ -886,15 +886,20 @@ func fill_array_mesh(model, world_models = []):
 			texture_index = surface.texture_index
 
 			var texture_name = ""
-						
-			#print("texture_index: %d, texture_names size: %d" % [texture_index, world_model.texture_names.size()])
-			
-			#texture_name = world_model.texture_names[texture_index].name
-			if texture_index >= 0 and texture_index < model.texture_list.size():
-				texture_name = model.texture_list[texture_index].to_lower()
+				
+			if model.PLATFORM == "PS2":
+				if texture_index >= 0 and texture_index < model.texture_list.size():
+					texture_name = model.texture_list[texture_index].to_lower()
+				else:
+					push_error("Ungültiger PS2 Texturindex: %d" % texture_index)
+					texture_name = "nothing.dtx"
 			else:
-				push_error("Ungültiger Texturindex: %d" % texture_index)
-				texture_name = "nothing.dtx"
+				# DAT/PC: Verwende die ursprüngliche Methode
+				if texture_index >= 0 and texture_index < world_model.texture_names.size():
+					texture_name = world_model.texture_names[texture_index].name.to_lower()
+				else:
+					push_error("Ungültiger DAT Texturindex: %d" % texture_index)
+					texture_name = "nothing.dtx"	
 			
 			print("World '", world_model.world_name, "' - Polygon ", poly_index, " verwendet Textur: ", texture_name, " (Index: ", texture_index, ")")
 			

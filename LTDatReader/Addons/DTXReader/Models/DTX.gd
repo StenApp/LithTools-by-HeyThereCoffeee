@@ -82,7 +82,7 @@ class DTX:
 		
 		var nice_version = MAX_UINT - self.version
 		
-		print("DTX Version: " + str(nice_version))
+		#print("DTX Version: " + str(nice_version))
 				
 		if [DTX_VERSION_LT1, DTX_VERSION_LT15, DTX_VERSION_LT2].has(self.version) == false:
 			return self._make_response(IMPORT_RETURN.ERROR, 'Unsupported file version (' + str(nice_version) + ')')
