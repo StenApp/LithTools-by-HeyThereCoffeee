@@ -160,15 +160,15 @@ class ABC:
 		quat.y = file.get_float()
 		quat.z = file.get_float()
 		return quat
-		
+	
 	func read_matrix(file : File):
 		var matrix_4x4 = []
 		for i in range(16):
 			matrix_4x4.append(file.get_float())
-			
+
 		return self.convert_4x4_to_transform(matrix_4x4)
-	# End Func
-	
+	#End Func
+		
 	func convert_4x4_to_transform(matrix):
 		return Transform(
 			Vector3( matrix[0], matrix[4], matrix[8]  ),

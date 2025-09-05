@@ -3,6 +3,8 @@ extends Node
 # Just the skeleton I can access anywhere, mostly for debug purposes
 var cheat_skeleton := Skeleton.new()
 
+var model = null
+
 func build(source_file, options):
 	var file = File.new()
 	if file.open(source_file, File.READ) != OK:
@@ -32,7 +34,8 @@ func build(source_file, options):
 			file.close()
 			print("IMPORT ERROR: " + str(response.message))
 			return FAILED
-		
+	
+	self.model = model	
 		
 	# Actually close the darn thing
 	file.close()
@@ -55,16 +58,73 @@ func build(source_file, options):
 	skeleton.owner = root
 	self.cheat_skeleton = skeleton
 	
-	var meshes = fill_array_mesh(model)
-
+	print("=== SKELETON DEBUG ===")
+	print("Skeleton hat ", skeleton.get_bone_count(), " Bones")
+	for i in range(skeleton.get_bone_count()):
+		var bone_name = skeleton.get_bone_name(i)
+		var parent_idx = skeleton.get_bone_parent(i)
+		var rest_transform = skeleton.get_bone_rest(i)
+		print("Bone ", i, ": ", bone_name, " | Parent: ", parent_idx)
+		print("  Rest Transform: ", rest_transform)
+	
+	var meshes = fill_array_mesh(model, skeleton)
+	
+	# DTX Texture Loading Setup
+	#var texture_path = get_dtx_path(source_file)
+	var texture_builder = load("res://addons/DTXReader/TextureBuilder.gd").new()
+	
+	# # Loop through our pieces, and add them to mesh instances
+	# for i in range(len(meshes)):
+		# var mesh = meshes[i]
+		# var piece = model.pieces[i]
+		# var mesh_instance = MeshInstance.new()
+		# mesh_instance.name = piece.name
+		# mesh_instance.mesh = mesh
+		
+		# # Create material with DTX texture
+		# var material = SpatialMaterial.new()
+		
+		# if File.new().file_exists(texture_path):
+			# var texture = texture_builder.build(texture_path, {})
+			# if texture != null:
+				# material.albedo_texture = texture
+				# print("Texture geladen: ", texture_path)
+			# else:
+				# print("DTX-Fehler: ", texture_path)
+		# else:
+			# print("DTX nicht gefunden: ", texture_path)
+		
+		# mesh_instance.material_override = material
+		# skeleton.add_child(mesh_instance)
+		# mesh_instance.owner = root
+	# # End For
+	
 	# Loop through our pieces, and add them to mesh instances
 	for i in range(len(meshes)):
-	#for mesh in meshes:
 		var mesh = meshes[i]
 		var piece = model.pieces[i]
 		var mesh_instance = MeshInstance.new()
 		mesh_instance.name = piece.name
 		mesh_instance.mesh = mesh
+		
+		# Create material with DTX texture
+		var material = SpatialMaterial.new()
+		
+		# HIER: Texture-Path für jedes Piece einzeln berechnen
+		var texture_path = get_dtx_path(source_file, piece.material_index)
+		print("Piece: ", piece.name, " Material_Index: ", piece.material_index, " -> Texture: ", texture_path)
+		
+		if File.new().file_exists(texture_path):
+			var texture = texture_builder.build(texture_path, {})
+			if texture != null:
+				material.albedo_texture = texture
+				print("Texture geladen: ", texture_path)
+			else:
+				print("DTX-Fehler: ", texture_path)
+		else:
+			print("DTX nicht gefunden: ", texture_path)
+		
+		mesh_instance.material_override = material
 		skeleton.add_child(mesh_instance)
 		mesh_instance.owner = root
 	# End For
@@ -76,6 +136,12 @@ func build(source_file, options):
 	anim_player.owner = root
 	anim_player = process_animations(model, anim_player)
 	
+	#autoset camera to scene
+	auto_frame_camera(root)
+	
+	# Model aufrecht stellen:
+	root.rotation_degrees = Vector3(0, 0, -90)
+	
 	# Pack our scene!
 	scene.pack(root)
 	
@@ -84,10 +150,142 @@ func build(source_file, options):
 	
 	return scene
 
-func fill_array_mesh(model):
+func get_dtx_path(abc_path: String, material_index: int) -> String:
+	var base_dir = abc_path.get_base_dir()
+	var base_name = abc_path.get_file().get_basename()
+	var skin_dir = base_dir.replace("models_pv", "skins_pv").replace("models", "skins")
+	
+	# Prüfe ob es ein Gun-Model ist
+	var is_gun = abc_path.to_lower().find("guns") != -1
+	
+	if material_index == 0:
+		# Index 0 = Haupt-Model-Texture (für alle)
+		return skin_dir + "/" + base_name + ".dtx"
+	elif material_index == 1:
+		if is_gun:
+			# Guns: Index 1 = Action Hands
+			return skin_dir + "/actionhands_pv.dtx"
+		else:
+			# Characters: Index 1 = Head Texture
+			return skin_dir + "/" + base_name + "_head.dtx"
+	else:
+		# Fallback für andere Indices
+		return skin_dir + "/" + base_name + "_" + str(material_index) + ".dtx"
+
+# func get_dtx_path(abc_path: String) -> String:
+	# var base_dir = abc_path.get_base_dir()
+	# var file_name = abc_path.get_file().replace(".abc", ".dtx")
+	
+	# # models_pv → skins_pv
+	# if base_dir.ends_with("models_pv"):
+		# return base_dir.replace("models_pv", "skins_pv") + "/" + file_name
+	
+	# # models → skins  
+	# elif base_dir.ends_with("models"):
+		# return base_dir.replace("models", "skins") + "/" + file_name
+	
+	# # Fallback: gleicher Ordner
+	# return base_dir + "/" + file_name
+
+# func build(source_file, options):
+	# var file = File.new()
+	# if file.open(source_file, File.READ) != OK:
+		# print("Failed to open " + source_file)
+		# return FAILED
+		
+	# print("Opened " + source_file)
+	
+	# var path = self.get_script().get_path().get_base_dir() + "/Models"
+	# var abc_file = load(path + "/ABC.gd")
+	# var abc6_file = load(path + "/ABC6.gd")
+	
+	# # Our helper script
+	# var abc_helper_script = load(self.get_script().get_path().get_base_dir() + "/ABCHelper.gd")
+	
+	# var model = abc_file.ABC.new()
+	
+	# var response = model.read(file)
+	# if response.code == model.IMPORT_RETURN.ERROR:
+		# print("Checking ABC version 6 reader!")
+		# # Try ABC 6
+		# model = abc6_file.ABC.new()
+		# response = model.read(file)
+		
+		# #...nope, we're ded.
+		# if response.code == model.IMPORT_RETURN.ERROR:
+			# file.close()
+			# print("IMPORT ERROR: " + str(response.message))
+			# return FAILED
+	
+	# self.model = model	
+		
+	# # Actually close the darn thing
+	# file.close()
+		
+	# # Setup our new scene
+	# var scene = PackedScene.new()
+	
+	# # Create our nodes
+	# var root = Spatial.new()
+	
+	# # Setup the nodes
+	# root.name = "Root"
+	
+	# root.set_script(abc_helper_script)
+	
+	# var skeleton = Skeleton.new()
+	# skeleton.name = "Skeleton"
+	# skeleton = build_skeleton(model, skeleton)
+	# root.add_child(skeleton)
+	# skeleton.owner = root
+	# self.cheat_skeleton = skeleton
+	
+	# print("=== SKELETON DEBUG ===")
+	# print("Skeleton hat ", skeleton.get_bone_count(), " Bones")
+	# for i in range(skeleton.get_bone_count()):
+		# var bone_name = skeleton.get_bone_name(i)
+		# var parent_idx = skeleton.get_bone_parent(i)
+		# var rest_transform = skeleton.get_bone_rest(i)
+		# print("Bone ", i, ": ", bone_name, " | Parent: ", parent_idx)
+		# print("  Rest Transform: ", rest_transform)
+	
+	# var meshes = fill_array_mesh(model, skeleton)
+	# #var meshes = fill_array_mesh(model)
+
+	# # Loop through our pieces, and add them to mesh instances
+	# for i in range(len(meshes)):
+	# #for mesh in meshes:
+		# var mesh = meshes[i]
+		# var piece = model.pieces[i]
+		# var mesh_instance = MeshInstance.new()
+		# mesh_instance.name = piece.name
+		# mesh_instance.mesh = mesh
+		# skeleton.add_child(mesh_instance)
+		# mesh_instance.owner = root
+	# # End For
+	
+	# # Animation time!
+	# var anim_player = AnimationPlayer.new()
+	# anim_player.name = "AnimPlayer"
+	# root.add_child(anim_player)
+	# anim_player.owner = root
+	# anim_player = process_animations(model, anim_player)
+	
+	# # Pack our scene!
+	# scene.pack(root)
+	
+	# # Clean up!
+	# root.queue_free()
+	
+	# return scene
+
+func fill_array_mesh(model, skeleton):
 	var meshes = []
 	var st = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	
+	print("=== SKELETON INFO ===")
+	print("Skeleton hat ", skeleton.get_bone_count(), " Bones")
 
 	for piece in model.pieces:
 		var verts = PoolVector3Array()
@@ -146,6 +344,7 @@ func fill_array_mesh(model):
 				this_vert_bones.append(bone_data[0])
 				this_vert_weights.append(bone_data[1])
 			# End For
+			
 			# For some reason these MUST be 4 values each!
 			var remainder = 4 - vert_weight_count[index]
 			for filler in range(remainder):
@@ -153,8 +352,8 @@ func fill_array_mesh(model):
 				this_vert_weights.append(0.0)
 			# End For
 				
-			st.add_bones(this_vert_bones)
-			st.add_weights(this_vert_weights)
+			#st.add_bones(this_vert_bones)
+			#st.add_weights(this_vert_weights)
 			
 			st.add_vertex(verts[index])
 			i += 1
@@ -169,6 +368,8 @@ func fill_array_mesh(model):
 	return meshes
 # End Func
 
+
+		
 func build_skeleton(model, skeleton : Skeleton):
 	for i in range(model.node_count):
 		var lt_node = model.nodes[i]
@@ -225,6 +426,42 @@ func process_animations(model, anim_player : AnimationPlayer):
 	return anim_player
 # End Func
 
+func auto_frame_camera(model_root):
+	# Berechne die Bounding Box des gesamten Models
+	var aabb = AABB()
+	var first_mesh = true
+	
+	for child in model_root.get_children():
+		if child is Skeleton:
+			for mesh_child in child.get_children():
+				if mesh_child is MeshInstance and mesh_child.mesh != null:
+					var mesh_aabb = mesh_child.mesh.get_aabb()
+					mesh_aabb = mesh_child.transform.xform(mesh_aabb)
+					
+					if first_mesh:
+						aabb = mesh_aabb
+						first_mesh = false
+					else:
+						aabb = aabb.merge(mesh_aabb)
+	
+	if first_mesh:  # Kein Mesh gefunden
+		return
+	
+	# Berechne Kamera-Position
+	var model_center = aabb.position + aabb.size * 0.5
+	var model_size = aabb.size.length()
+	var camera_distance = model_size * 1.5  # 1.5x Abstand für gute Sicht
+	
+	# Kamera positionieren (45° Winkel von vorne-rechts-oben)
+	var camera_offset = Vector3(camera_distance * 0.7, camera_distance * 0.5, camera_distance * 0.7)
+	var camera_position = model_center + camera_offset
+	
+	print("Model AABB: ", aabb)
+	print("Kamera Position: ", camera_position, " -> Ziel: ", model_center)
+	
+	# Falls Sie Zugriff auf die Kamera haben:
+	# camera.global_transform.origin = camera_position
+	# camera.look_at(model_center, Vector3.UP)
 
 # This is quite a function!
 # Call this within a keyframe loop
