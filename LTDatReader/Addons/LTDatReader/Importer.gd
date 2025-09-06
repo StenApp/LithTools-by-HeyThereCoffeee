@@ -5,10 +5,10 @@ func get_importer_name():
 	return "lithtech.dat.import"
 
 func get_visible_name():
-	return "Lithtech DAT Importer"
+	return "Lithtech DAT/LTB Importer"
 
 func get_recognized_extensions():
-	return ["dat"]
+	return ["dat", "ltb"]  # Beide weiterhin erkennen
 
 func get_save_extension():
 	return "tscn"
@@ -31,16 +31,25 @@ func get_option_visibility(option, options):
 var _world_builder = null
 
 func _init():
-	#self._world_builder = load('res://Addons/LTDatReader/WorldBuilder.gd').new()
 	var script = load("res://Addons/LTDatReader/WorldBuilder.gd")
 	self._world_builder = script.new()
-	
 
 func import(source_file, save_path, options, platform_variants, gen_files):
-	var scene = self._world_builder.build(source_file, options)
+	# Smart Detection: DAT vs LTB
+	if source_file.get_extension().to_lower() == "ltb":
+		# LTB-Datei → An LTBReader delegieren
+		print("LTB file detected - delegating to LTBReader")
+		
+		# Lade den LTBReader Importer
+		var ltb_importer = load("res://addons/LTBReader/LTBImporter.gd").new()
+		return ltb_importer.import(source_file, save_path, options, platform_variants, gen_files)
 	
-	var filename = save_path + "." + get_save_extension()
-	print("Saving as ", filename)
-	ResourceSaver.save(filename, scene)
-	return OK
-
+	else:
+		# DAT-Datei → Normale LTDatReader Verarbeitung
+		print("DAT file detected - using LTDatReader")
+		var scene = self._world_builder.build(source_file, options)
+		
+		var filename = save_path + "." + get_save_extension()
+		print("Saving as ", filename)
+		ResourceSaver.save(filename, scene)
+		return OK

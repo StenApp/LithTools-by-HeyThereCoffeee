@@ -19,6 +19,36 @@ func chunk(array, by):
 		
 	return chunks
 
+# func build(source_file, options):
+	# var file = File.new()
+	# if file.open(source_file, File.READ) != OK:
+		# print("Failed to open " + source_file)
+		# return FAILED
+		
+	# print("Opened " + source_file)
+	
+	# var dat_file = load("res://Addons/LTDatReader/Models/DAT.gd")
+	# var ltb_file = load("res://Addons/LTDatReader/Models/LTB_PS2.gd")
+	
+	# # Setup our new scene
+	# var scene = PackedScene.new()
+	
+	# # Create our nodes
+	# var root = Spatial.new()
+	
+	# # Setup the nodes
+	# root.name = "Root"
+	
+	# var model = null
+	# var file_extension = "dat"
+	# # Model as in MVC model, not mesh model!
+	# if ".ltb" in source_file.to_lower():
+		# model = ltb_file.LTB_PS2.new()
+		# file_extension = "ltb"
+	# else:
+		# model = dat_file.DAT.new()
+	
+	
 func build(source_file, options):
 	var file = File.new()
 	if file.open(source_file, File.READ) != OK:
@@ -30,24 +60,44 @@ func build(source_file, options):
 	var dat_file = load("res://Addons/LTDatReader/Models/DAT.gd")
 	var ltb_file = load("res://Addons/LTDatReader/Models/LTB_PS2.gd")
 	
-	# Setup our new scene
+	# Setup our new scene FIRST
 	var scene = PackedScene.new()
-	
-	# Create our nodes
 	var root = Spatial.new()
-	
-	# Setup the nodes
 	root.name = "Root"
 	
 	var model = null
 	var file_extension = "dat"
+	
 	# Model as in MVC model, not mesh model!
 	if ".ltb" in source_file.to_lower():
-		model = ltb_file.LTB_PS2.new()
-		file_extension = "ltb"
+		# Check LTB version to determine type
+		var file_type = file.get_32()  # Skip file type
+		var version = file.get_16()
+		file.seek(0)  # Back to beginning
+		
+		print("LTB Version detected: ", version)
+		
+		if version == 66:
+			# Level-LTB (PS2) → Process with LTDatReader
+			print("Level-LTB (PS2) detected - processing with LTDatReader")
+			model = ltb_file.LTB_PS2.new()
+			file_extension = "ltb"
+		elif version == 2 || version == 16:  # BEIDE Model-Versionen!
+			# Model-LTB (NOLF1 PC = v2, NOLF PS2 = v16) → Delegate to LTBReader
+			print("Model-LTB (version ", version, ") detected - delegating to LTBReader")
+			file.close()
+			
+			# Load and call LTBReader directly
+			var ltb_model_builder = load("res://addons/LTBReader/LTBModelBuilder.gd").new()
+			return ltb_model_builder.build(source_file, options)
+		else:
+			print("Unknown LTB version: ", version)
+			file.close()
+			return FAILED
 	else:
+		# DAT file
 		model = dat_file.DAT.new()
-	
+		
 	# Batched reading
 	var response = model.read(file, true)
 	if response.code == model.IMPORT_RETURN.ERROR:

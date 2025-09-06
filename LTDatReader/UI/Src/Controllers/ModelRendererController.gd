@@ -171,8 +171,12 @@ func _threaded_load(path):
 	self.loaded_file.raw_data = raw_file
 	self.loaded_file.scene = scene
 	
-	self._loaded_file = scene.instance()
-	
+	#self._loaded_file = scene.instance()
+	if scene is PackedScene:
+		self._loaded_file = scene.instance()
+	else:
+		print("ERROR: Scene loading failed, got: ", scene)
+		return
 	
 	
 	
