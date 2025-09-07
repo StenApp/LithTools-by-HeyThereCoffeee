@@ -1,6 +1,8 @@
 class ABC:
 	var name = ""
-
+	
+	var mirror_abc_for_godot = true  # Für Links-Rechts Spiegelung
+	
 	# Header
 	var version = 0
 	var node_count = 0

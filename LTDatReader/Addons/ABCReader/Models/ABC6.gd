@@ -2,6 +2,8 @@ class ABC:
 	var name = ""
 
 	const version_constant = "MonolithExport Model File v6"
+	
+	var mirror_abc_for_godot = true  # Für Links-Rechts Spiegelung
 
 	# Header
 	var version = 0

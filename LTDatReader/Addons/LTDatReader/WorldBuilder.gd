@@ -77,7 +77,7 @@ func build(source_file, options):
 		
 		print("LTB Version detected: ", version)
 		
-		if version == 66:
+		if version == 66 || version == 4694:
 			# Level-LTB (PS2) → Process with LTDatReader
 			print("Level-LTB (PS2) detected - processing with LTDatReader")
 			model = ltb_file.LTB_PS2.new()

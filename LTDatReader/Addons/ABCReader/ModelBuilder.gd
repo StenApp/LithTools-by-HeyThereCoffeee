@@ -1,5 +1,8 @@
 extends Node
 
+# ABC → Godot Koordinatensystem-Korrektur
+var mirror_abc_for_godot = true  # Für Links-Rechts Spiegelung
+
 # Just the skeleton I can access anywhere, mostly for debug purposes
 var cheat_skeleton := Skeleton.new()
 
@@ -107,6 +110,10 @@ func build(source_file, options):
 		mesh_instance.name = piece.name
 		mesh_instance.mesh = mesh
 		
+		# ABC → Godot Koordinatensystem-Korrektur (DIESE ZEILE HINZUFÜGEN)
+		if mirror_abc_for_godot:
+			mesh_instance.scale = Vector3(-1.0, 1.0, 1.0)
+		
 		# Create material with DTX texture
 		var material = SpatialMaterial.new()
 		
@@ -137,10 +144,10 @@ func build(source_file, options):
 	anim_player = process_animations(model, anim_player)
 	
 	#autoset camera to scene
-	auto_frame_camera(root)
+	#auto_frame_camera(root)
 	
 	# Model aufrecht stellen:
-	root.rotation_degrees = Vector3(0, 0, -90)
+	#root.rotation_degrees = Vector3(0, 0, -90)
 	
 	# Pack our scene!
 	scene.pack(root)

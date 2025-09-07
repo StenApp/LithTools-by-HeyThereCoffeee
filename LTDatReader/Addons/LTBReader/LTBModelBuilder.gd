@@ -5,6 +5,9 @@ var cheat_skeleton := Skeleton.new()
 
 var model = null
 
+var fix_winding_for_godot = true  # Für inside-out
+var mirror_for_godot = true       # Für links-rechts
+
 func build(source_file, options):
 	var file = File.new()
 	if file.open(source_file, File.READ) != OK:
@@ -74,6 +77,10 @@ func build(source_file, options):
 		mesh_instance.name = piece.name
 		mesh_instance.mesh = mesh
 		
+		# PS2 → Godot Koordinatensystem-Korrektur
+		if mirror_for_godot:
+			mesh_instance.scale = Vector3(-1.0, 1.0, 1.0)
+		
 		# Create material with DTX texture
 		var material = SpatialMaterial.new()
 		
@@ -104,10 +111,10 @@ func build(source_file, options):
 	anim_player = process_animations(model, anim_player)
 	
 	# Autoset camera to scene
-	auto_frame_camera(root)
+	#auto_frame_camera(root)
 	
 	# Model aufrecht stellen:
-	root.rotation_degrees = Vector3(0, 0, -90)
+	#root.rotation_degrees = Vector3(0, 0, -90)
 	
 	# Pack our scene!
 	scene.pack(root)

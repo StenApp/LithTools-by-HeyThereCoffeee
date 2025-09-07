@@ -23,6 +23,9 @@ const VIF_MSCALF = 0x15000000
 const VIF_DIRECT = 0x50
 const VIF_UNPACK = 0x6C
 
+var fix_winding_for_godot = true  # Für inside-out Problem
+var mirror_for_godot = true       # Für links-rechts Problem
+
 # Main LTB data
 var name = ""
 var version = 0
@@ -346,7 +349,7 @@ func _read_lod(file: File, lod_index: int) -> LOD:
 	
 	# Finalize LOD data
 	lod.vertices = vertex_list.get_vertex_list()
-	vertex_list.generate_faces()
+	vertex_list.generate_faces(fix_winding_for_godot)
 	lod.faces = vertex_list.get_face_list()
 	
 	# Handle skeletal mesh weights if needed
@@ -649,8 +652,8 @@ class VertexList:
 			groups.append(group_id)
 		
 		face_verts.append(local_face)
-	
-	func generate_faces():
+				
+	func generate_faces(fix_winding = false):
 		faces.clear()
 		
 		for group_id in groups:
@@ -664,7 +667,15 @@ class VertexList:
 			for i in range(2, grouped_faces.size()):
 				var face = Face.new()
 				
-				if grouped_faces[i].face_vertex.reversed:
+				# Bestimme die Winding Order - mit optionalem Fix
+				var should_reverse = grouped_faces[i].face_vertex.reversed
+				
+				# Für PS2 → Godot: Winding Order umkehren
+				if fix_winding:
+					should_reverse = not should_reverse
+				
+				# Erstelle Faces mit korrekter Winding Order
+				if should_reverse:
 					if flip:
 						face.vertices = [grouped_faces[i-1].face_vertex, grouped_faces[i].face_vertex, grouped_faces[i-2].face_vertex]
 					else:
@@ -676,7 +687,7 @@ class VertexList:
 						face.vertices = [grouped_faces[i].face_vertex, grouped_faces[i-2].face_vertex, grouped_faces[i-1].face_vertex]
 				
 				faces.append(face)
-				flip = not flip
+				flip = not flip			
 	
 	func find_in_list(merge_string: String) -> int:
 		for i in range(list.size()):
