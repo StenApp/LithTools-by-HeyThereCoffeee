@@ -68,35 +68,63 @@ func build(source_file, options):
 	var model = null
 	var file_extension = "dat"
 	
-	# Model as in MVC model, not mesh model!
+	# # Model as in MVC model, not mesh model!
+	# if ".ltb" in source_file.to_lower():
+		# # Check LTB version to determine type
+		# var file_type = file.get_32()  # Skip file type
+		# var version = file.get_16()
+		# file.seek(0)  # Back to beginning
+		
+		# print("LTB Version detected: ", version)
+		
+		# if version == 66 || version == 4694:
+			# # Level-LTB (PS2) → Process with LTDatReader
+			# print("Level-LTB (PS2) detected - processing with LTDatReader")
+			# model = ltb_file.LTB_PS2.new()
+			# file_extension = "ltb"
+		# elif version == 2 || version == 16:  # BEIDE Model-Versionen!
+			# # Model-LTB (NOLF1 PC = v2, NOLF PS2 = v16) → Delegate to LTBReader
+			# print("Model-LTB (version ", version, ") detected - delegating to LTBReader")
+			# file.close()
+			
+			# # Load and call LTBReader directly
+			# var ltb_model_builder = load("res://addons/LTBReader/LTBModelBuilder.gd").new()
+			# return ltb_model_builder.build(source_file, options)
+		# else:
+			# print("Unknown LTB version: ", version)
+			# file.close()
+			# return FAILED
+	# else:
+		# # DAT file
+		# model = dat_file.DAT.new()
+		
 	if ".ltb" in source_file.to_lower():
-		# Check LTB version to determine type
-		var file_type = file.get_32()  # Skip file type
-		var version = file.get_16()
-		file.seek(0)  # Back to beginning
-		
-		print("LTB Version detected: ", version)
-		
-		if version == 66 || version == 4694:
-			# Level-LTB (PS2) → Process with LTDatReader
+		# Peek first 4 bytes
+		var first32 = file.get_32()
+		file.seek(0)
+
+		# Level-LTB erkennt man daran, dass diese 4 Bytes bereits 66 oder 4694 ergeben
+		if first32 == 66 or first32 == 4694:
 			print("Level-LTB (PS2) detected - processing with LTDatReader")
 			model = ltb_file.LTB_PS2.new()
 			file_extension = "ltb"
-		elif version == 2 || version == 16:  # BEIDE Model-Versionen!
-			# Model-LTB (NOLF1 PC = v2, NOLF PS2 = v16) → Delegate to LTBReader
-			print("Model-LTB (version ", version, ") detected - delegating to LTBReader")
-			file.close()
-			
-			# Load and call LTBReader directly
-			var ltb_model_builder = load("res://addons/LTBReader/LTBModelBuilder.gd").new()
-			return ltb_model_builder.build(source_file, options)
+
 		else:
-			print("Unknown LTB version: ", version)
-			file.close()
-			return FAILED
+			# sonst Model-Schema: 4 Bytes Typ + 2 Bytes Version
+			file.get_32()                  # FileType überspringen
+			var version16 = file.get_16()  # 16-Bit-Version lesen
+			print("LTB Model Version detected: ", version16)
+
+			if version16 == 2 or version16 == 16:
+				file.close()
+				var ltb_model_builder = load("res://addons/LTBReader/LTBModelBuilder.gd").new()
+				return ltb_model_builder.build(source_file, options)
+			else:
+				print("Unknown LTB format")
+				file.close()
+				return FAILED
 	else:
-		# DAT file
-		model = dat_file.DAT.new()
+		model = dat_file.DAT.new()	
 		
 	# Batched reading
 	var response = model.read(file, true)
