@@ -909,21 +909,27 @@ func fill_array_mesh(model, world_models = []):
 	big_lightmap_image.create(LIGHTMAP_ATLAS_SIZE, LIGHTMAP_ATLAS_SIZE, false, Image.FORMAT_RGB8)
 	big_lightmap_image.blit_rect(white_image, Rect2(Vector2(0,0), Vector2(2,2)), Vector2(LIGHTMAP_ATLAS_SIZE - 2, LIGHTMAP_ATLAS_SIZE - 2))
 
+
+	var skip_models = [
+	"VisBSP",
+	]
+	
 	for world_model_index in range(len(world_models)):
 		var world_model = world_models[world_model_index]
 		
-#		# Filter: Nur PhysicsBSP anzeigen
-#		if world_model.world_name != "PhysicsBSP":
+		if world_model.world_name in skip_models:
+			print("Skipping " + world_model.world_name)
+			continue
+#
+		
+##		# Filter: Nur X anzeigen
+#		if world_model.world_name != "Terrain0":
 #			print("Skipping " + world_model.world_name)
 #			continue
 		
-		if world_model.world_name == "VisBSP":
-			print("Skipping " + world_model.world_name)
-			continue
-
-		# if world_model.world_name == "PhysicsBSP":
-			# print("Skipping " + world_model.world_name)
-			# continue
+#		if world_model.world_name == "VisBSP":
+#			print("Skipping " + world_model.world_name)
+#			continue
 		
 		print("Processing " + world_model.world_name)
 		

@@ -618,12 +618,16 @@ class LTB_PS2:
 		var records = []
 		
 		func read(ltb: LTB_PS2, f: File):
-			
 			self.unk_int_1 = f.get_32()
 			self.unk_int_2 = f.get_32()
 			self.unk_int_3 = f.get_32()
 			
 			self.size = self.unk_int_1 * self.unk_int_2 * self.unk_int_3
+			
+			# Wenn Size 0 ist, abbrechen
+			if self.size == 0:
+				print("WARNING: PBlockTable Size is 0, skipping")
+				return
 			
 			self.unk_vector_1 = ltb.read_vector3(f)
 			self.unk_vector_2 = ltb.read_vector3(f)
@@ -639,7 +643,6 @@ class LTB_PS2:
 				var data_size = f.get_16()
 				var unk_1 = f.get_16()
 			# End For
-			
 		# End Func
 	# End Class
 		

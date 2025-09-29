@@ -95,9 +95,6 @@ anchor_bottom = 1.0
 margin_top = 34.0
 mouse_filter = 2
 script = ExtResource( 5 )
-__meta__ = {
-"_edit_use_anchors_": false
-}
 
 [node name="Background" type="ColorRect" parent="UI/LoadingScreen"]
 anchor_right = 1.0
