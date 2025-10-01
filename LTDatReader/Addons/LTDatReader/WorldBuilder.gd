@@ -969,6 +969,22 @@ func fill_array_mesh(model, world_models = []):
 			
 			texture_index = surface.texture_index
 
+			#debug
+			if poly_index == 0:
+				print("\n=== POLY 0 DEBUG (GDScript) ===")
+				print("World: ", world_model.world_name)
+				print("Surface Index: ", poly.surface_index)
+				print("DiskVert Count: ", len(poly.disk_verts))
+				for i in range(len(poly.disk_verts)):
+					var dv = poly.disk_verts[i]
+					var idx = dv.vertex_index
+					if idx >= 0 and idx < len(world_model.points):
+						var point = world_model.points[idx]
+						print("  DiskVert[", i, "]: Index=", idx, " → Point=", point)
+					else:
+						print("  DiskVert[", i, "]: Index=", idx, " → OUT OF BOUNDS!")
+				print("===============================\n")
+
 			var texture_name = ""
 				
 			if model.PLATFORM == "PS2":

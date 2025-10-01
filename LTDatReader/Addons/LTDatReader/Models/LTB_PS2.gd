@@ -425,11 +425,27 @@ class LTB_PS2:
 				self.unknown_float_1 = f.get_float()  # self. hinzufügen
 				self.unknown_float_2 = f.get_float()  # self. hinzufügen
 				
-				var unk = f.get_float()
-				var hack = f.get_32()
+#				var unk = f.get_float()
+#				var hack = f.get_32()
+#
+#				if hack < 60000 or hack == 4294967295: # -1
+#					f.seek(f.get_position() - 4)
+
+#				var unknown3 = f.get_32()
+#
+#				# Hack wird gelesen wenn unknown3 selbst > 60000 ist (nicht peek!)
+#				if unknown3 > 60000 and unknown3 != 4294967295:
+#					var hack = f.get_32()
 				
-				if hack < 60000 or hack == 4294967295: # -1
-					f.seek(f.get_position() - 4)
+				var unknown3 = f.get_32()
+				var peek_val = f.get_32()
+
+				# Hack nur bei plausiblen int-Werten (60000 < x < 2100000000) und nicht -1
+				if peek_val > 60000 and peek_val < 2100000000 and peek_val != 4294967295:
+					pass  # Hack bleibt gelesen
+				else:
+					f.seek(f.get_position() - 4)  # Spring zurück
+				
 				
 #				# Skip the next two variables...
 #				f.seek(f.get_position() + 8)
@@ -686,6 +702,8 @@ class LTB_PS2:
 			self.world_name = ltb.read_string(f)
 			print("World Name: ",self.world_name)
 			
+			#print("0x%X: After WorldName" % f.get_position())
+			
 			self.world_info_flags = f.get_32()
 			var unknown_value = f.get_32()
 			
@@ -713,6 +731,8 @@ class LTB_PS2:
 			
 			var unknown_4 = f.get_16()
 			
+			#print("0x%X: After Counts" % f.get_position())
+			
 			# Not sure why it's poly count..
 			for _i in range(self.poly_count):
 				var vert = f.get_8()
@@ -721,13 +741,14 @@ class LTB_PS2:
 				#vert += f.get_8()
 				self.verts.append(vert)
 			# End For
+			#print("0x%X: After Vertices (%d)" % [f.get_position(), self.poly_count])
 
 			for _i in range(self.leaf_count):
 				var leaf = WorldLeaf.new()
 				leaf.read(ltb, f)
 				self.leafs.append(leaf)
 			# End For
-			
+			#print("0x%X: After Leafs (%d)" % [f.get_position(), self.leaf_count])
 			var debug_ftell = f.get_position()
 			
 			for _i in range(self.plane_count):
@@ -735,7 +756,7 @@ class LTB_PS2:
 				plane.read(ltb, f)
 				self.planes.append(plane)
 			# End For
-			
+			#print("0x%X: After Planes (%d)" % [f.get_position(), self.plane_count])
 			for _i in range(self.surface_count):
 				var surface = WorldSurface.new()
 				surface.read(ltb, f)
@@ -747,6 +768,7 @@ class LTB_PS2:
 			if debug_ftell == 3633:
 				var hi = true
 				hi = false
+			#print("0x%X: After Surfaces (%d)" % [f.get_position(), self.surface_count])
 			
 			for i in range(self.poly_count):
 				var poly = WorldPoly.new()
@@ -764,7 +786,7 @@ class LTB_PS2:
 				
 				self.polies.append(poly)
 			# End For
-			
+			#print("0x%X: After Polygons (%d)" % [f.get_position(), self.poly_count])
 			debug_ftell = f.get_position()
 			
 			for _i in range(self.node_count):
@@ -772,14 +794,22 @@ class LTB_PS2:
 				node.read(ltb, f, self.node_count)
 				self.nodes.append(node)
 			# End For
+			#print("0x%X: After Nodes (%d)" % [f.get_position(), self.node_count])
 			
 			for _i in range(self.user_portal_count):
 				var portal = WorldUserPortal.new()
 				portal.read(ltb, f)
 				self.user_portals.append(portal)
 			# End For
+			#print("0x%X: After UserPortals (%d)" % [f.get_position(), self.user_portal_count])
+			
+			#print("0x%X: BEFORE Points (%d) - EXPECTED: ???" % [f.get_position(), self.point_count])
 			
 			if ltb.version == LTB_PS2_VERSION_NOLF:
+				
+				#var pos_before = f.get_position()
+				#print("Position BEFORE Points: 0x%X" % pos_before)
+				
 				for _i in range(self.point_count):
 					self.points.append(ltb.read_vector3(f))
 					var one = f.get_float()
