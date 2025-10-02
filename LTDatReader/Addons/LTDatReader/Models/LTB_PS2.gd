@@ -431,21 +431,13 @@ class LTB_PS2:
 #				if hack < 60000 or hack == 4294967295: # -1
 #					f.seek(f.get_position() - 4)
 
-#				var unknown3 = f.get_32()
-#
-#				# Hack wird gelesen wenn unknown3 selbst > 60000 ist (nicht peek!)
-#				if unknown3 > 60000 and unknown3 != 4294967295:
-#					var hack = f.get_32()
-				
+#							
 				var unknown3 = f.get_32()
-				var peek_val = f.get_32()
 
-				# Hack nur bei plausiblen int-Werten (60000 < x < 2100000000) und nicht -1
-				if peek_val > 60000 and peek_val < 2100000000 and peek_val != 4294967295:
-					pass  # Hack bleibt gelesen
-				else:
-					f.seek(f.get_position() - 4)  # Spring zurück
-				
+				# Hack folgt NUR wenn Unknown3 im Bereich 1.0 - 1.2 Milliarden liegt
+				if unknown3 >= 1000000000 and unknown3 < 1200000000:
+					var hack = f.get_32()
+				# Sonst (2133073948, 2139127936, oder andere) → kein Hack
 				
 #				# Skip the next two variables...
 #				f.seek(f.get_position() + 8)
