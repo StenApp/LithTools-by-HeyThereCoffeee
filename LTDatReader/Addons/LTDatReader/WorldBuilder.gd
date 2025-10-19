@@ -487,34 +487,35 @@ func should_debug_texture(texture_name: String) -> bool:
 	# for debug_tex in debug_textures:
 		# if texture_name.find(debug_tex) >= 0:
 			# return true
-	# return false
-	return true
+	return false
+	#return true
 
 func debug_uv_calculation(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, polygon_center: Vector3, plane_normal: Vector3, uv_origin: Vector3, local_p: Vector3, local_q: Vector3, u: float, v: float, texture_name: String):
-	"""
-	Debug output for complex UV calculations
-	"""
-	print("=== ENHANCED UV MAPPING DEBUG ===")
-	print("Texture: ", texture_name)
-	print("Vertex: ", vertex)
-	print("Original O: ", o, " P: ", p, " Q: ", q)
-	print("Polygon Center: ", polygon_center)
-	print("Plane Normal: ", plane_normal)
-	print("Calculated UV Origin: ", uv_origin)
-	print("Transformed P: ", local_p, " Q: ", local_q)
-	print("Final UV: (", u, ", ", v, ")")
+	# """
+	# Debug output for complex UV calculations
+	# """
+	# print("=== ENHANCED UV MAPPING DEBUG ===")
+	# print("Texture: ", texture_name)
+	# print("Vertex: ", vertex)
+	# print("Original O: ", o, " P: ", p, " Q: ", q)
+	# print("Polygon Center: ", polygon_center)
+	# print("Plane Normal: ", plane_normal)
+	# print("Calculated UV Origin: ", uv_origin)
+	# print("Transformed P: ", local_p, " Q: ", local_q)
+	# print("Final UV: (", u, ", ", v, ")")
 	
 	# Diagnostic checks
 	var p_perp_normal = abs(local_p.dot(plane_normal))
 	var q_perp_normal = abs(local_q.dot(plane_normal))
 	var p_perp_q = abs(local_p.normalized().dot(local_q.normalized()))
-	print("P⊥Normal: ", p_perp_normal, " Q⊥Normal: ", q_perp_normal, " P⊥Q: ", p_perp_q)
+	#print("P⊥Normal: ", p_perp_normal, " Q⊥Normal: ", q_perp_normal, " P⊥Q: ", p_perp_q)
 	
-	if p_perp_normal < 0.1 and q_perp_normal < 0.1 and p_perp_q < 0.1:
-		print("*** VECTORS ARE MATHEMATICALLY CORRECT ***")
-	else:
-		print("*** VECTORS WERE CORRECTED ***")
-	print("===================================")
+	#if p_perp_normal < 0.1 and q_perp_normal < 0.1 and p_perp_q < 0.1:
+		#print("*** VECTORS ARE MATHEMATICALLY CORRECT ***")
+	#else:
+		
+		#print("*** VECTORS WERE CORRECTED ***")
+	#print("===================================")
 
 # Alternative simpler function for basic cases
 func opq_to_uv_simple(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, polygon_center: Vector3, plane_normal: Vector3, texture_name: String, tex_width = 64.0, tex_height = 64.0):
@@ -982,20 +983,20 @@ func fill_array_mesh(model, world_models = []):
 			texture_index = surface.texture_index
 
 			#debug
-			if poly_index == 0:
-				print("\n=== POLY 0 DEBUG (GDScript) ===")
-				print("World: ", world_model.world_name)
-				print("Surface Index: ", poly.surface_index)
-				print("DiskVert Count: ", len(poly.disk_verts))
-				for i in range(len(poly.disk_verts)):
-					var dv = poly.disk_verts[i]
-					var idx = dv.vertex_index
-					if idx >= 0 and idx < len(world_model.points):
-						var point = world_model.points[idx]
-						print("  DiskVert[", i, "]: Index=", idx, " → Point=", point)
-					else:
-						print("  DiskVert[", i, "]: Index=", idx, " → OUT OF BOUNDS!")
-				print("===============================\n")
+			# if poly_index == 0:
+				# print("\n=== POLY 0 DEBUG (GDScript) ===")
+				# print("World: ", world_model.world_name)
+				# print("Surface Index: ", poly.surface_index)
+				# print("DiskVert Count: ", len(poly.disk_verts))
+				# for i in range(len(poly.disk_verts)):
+					# var dv = poly.disk_verts[i]
+					# var idx = dv.vertex_index
+					# if idx >= 0 and idx < len(world_model.points):
+						# var point = world_model.points[idx]
+						# print("  DiskVert[", i, "]: Index=", idx, " → Point=", point)
+					# else:
+						# print("  DiskVert[", i, "]: Index=", idx, " → OUT OF BOUNDS!")
+				# print("===============================\n")
 
 			var texture_name = ""
 				
@@ -1013,7 +1014,7 @@ func fill_array_mesh(model, world_models = []):
 					push_error("Ungültiger DAT Texturindex: %d" % texture_index)
 					texture_name = "nothing.dtx"	
 			
-			print("World '", world_model.world_name, "' - Polygon ", poly_index, " verwendet Textur: ", texture_name, " (Index: ", texture_index, ")")
+			#print("World '", world_model.world_name, "' - Polygon ", poly_index, " verwendet Textur: ", texture_name, " (Index: ", texture_index, ")")
 			
 			var tex = get_texture(texture_name)
 			var tex_width = 64
@@ -1055,10 +1056,10 @@ func fill_array_mesh(model, world_models = []):
 				var is_packed = (surface.flags & (1 << 2)) != 0
 				if is_packed:
 					calculation_method = "ps2_opq"
-					print("POLYGON %d USING OPQ - Surface flags: 0x%X" % [poly_index, surface.flags])
+					#print("POLYGON %d USING OPQ - Surface flags: 0x%X" % [poly_index, surface.flags])
 				else:
 					calculation_method = "ps2_direct"
-					print("POLYGON %d USING DIRECT UVs - Surface flags: 0x%X" % [poly_index, surface.flags])
+					#print("POLYGON %d USING DIRECT UVs - Surface flags: 0x%X" % [poly_index, surface.flags])
 			else:
 				# PC/DAT: Hole OPQ je nach LithTech-Version
 				if model.PLATFORM == "PC" and (model.is_lithtech_1() or model.is_lithtech_2()):
