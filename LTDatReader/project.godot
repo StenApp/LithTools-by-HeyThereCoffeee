@@ -12,10 +12,16 @@ _global_script_classes=[ {
 "base": "Reference",
 "class": "LTB",
 "language": "GDScript",
-"path": "res://Addons/LTBReader/LTB.gd"
+"path": "res://Addons/LTBReader/Models/LTB_PS2.gd"
+}, {
+"base": "Reference",
+"class": "LTB_PC",
+"language": "GDScript",
+"path": "res://Addons/LTBReader/Models/LTB_PC.gd"
 } ]
 _global_script_class_icons={
-"LTB": ""
+"LTB": "",
+"LTB_PC": ""
 }
 
 [application]

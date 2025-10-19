@@ -17,7 +17,7 @@ func build(source_file, options):
 	print("Opening LTB file: " + source_file)
 	
 	# Load our LTB reader
-	var ltb_file = load(self.get_script().get_path().get_base_dir() + "/LTB.gd")
+	var ltb_file = load(self.get_script().get_path().get_base_dir() + "/Models/LTB_PS2.gd")
 	
 	# Our helper script
 	var ltb_helper_script = load(self.get_script().get_path().get_base_dir() + "/LTBHelper.gd")

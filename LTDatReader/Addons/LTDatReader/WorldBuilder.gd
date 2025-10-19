@@ -110,17 +110,29 @@ func build(source_file, options):
 			file_extension = "ltb"
 
 		else:
-			# sonst Model-Schema: 4 Bytes Typ + 2 Bytes Version
-			file.get_32()                  # FileType überspringen
-			var version16 = file.get_16()  # 16-Bit-Version lesen
-			print("LTB Model Version detected: ", version16)
-
-			if version16 == 2 or version16 == 16:
+			# Model-LTB: Lese als 32-bit + 16-bit (funktioniert für PC und PS2!)
+			file.seek(0)  # Zurück zum Anfang
+			var file_type = file.get_32()  # 4 Bytes: 0x00000001 (PC) oder 0x00000002 (PS2)
+			var version = file.get_16()    # 2 Bytes: Version
+			
+			print("LTB Model - FileType: ", file_type, " Version: ", version)
+			
+			if file_type == 589825 and version == 0:
+				# PC D3D Model (NOLF2)
+				print("Loading PC LTB Model (v9)")
 				file.close()
-				var ltb_model_builder = load("res://addons/LTBReader/LTBModelBuilder.gd").new()
-				return ltb_model_builder.build(source_file, options)
+				var ltb_pc_builder = load("res://addons/LTBReader/LTBModelBuilder_PC.gd").new()
+				return ltb_pc_builder.build(source_file, options)
+			
+			elif file_type == 2 and version == 16:
+				# PS2 Model
+				print("Loading PS2 LTB Model (v16)")
+				file.close()
+				var ltb_ps2_builder = load("res://addons/LTBReader/LTBModelBuilder.gd").new()
+				return ltb_ps2_builder.build(source_file, options)
+			
 			else:
-				print("Unknown LTB format")
+				print("Unknown LTB Model format - FileType: ", file_type, " Version: ", version)
 				file.close()
 				return FAILED
 	else:

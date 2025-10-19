@@ -46,9 +46,10 @@ func on_file_open():
 	# Filter für unterstützte Dateitypen
 	self.file_dialog.set_filters(PoolStringArray([
 		"*.ltb ; Lithtech Binary File (Model/Level)",
-		"*.abc ; Lithtech ABC Mesh File", 
-		"*.dtx ; Lithtech DTX Texture File",
-		"* ; All Files"
+		"*.dat ; Lithtech DAT File (Level)",
+		"*.abc ; Lithtech ABC File (Model)", 
+		"*.dtx ; Lithtech DTX File (Texture)"
+		#"* ; All Files"
 	]))
 	
 	self.file_dialog.popup_centered_ratio(0.5)
