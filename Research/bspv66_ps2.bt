@@ -13,7 +13,7 @@ struct LTString {
 
 typedef uint32 uint32_t;
 
-// NOLF version 66 - PC
+// NOLF version 66 - PS2
 struct WorldHeader {
     uint32_t Version;
     uint32_t ObjectDataPosition;
@@ -143,7 +143,6 @@ struct DiskVert {
         int Hack;
     }
     // Werte wie 2133073948, 2139127936 brauchen KEINEN Hack
-};
 };
 
 struct PackedDiskVert {
