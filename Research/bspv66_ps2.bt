@@ -133,9 +133,17 @@ struct DiskVert {
 
     int Unknown3;
 
-    if (ReadInt() > 60000) {
+    //if (ReadInt() > 60000) {
+    //    int Hack;
+    //}
+    
+    // Hack nur wenn Unknown3 zwischen 1.0 und 1.2 Milliarden liegt
+    // (wie im GDScript: unknown3 >= 1000000000 and unknown3 < 1200000000)
+    if (Unknown3 >= 1000000000 && Unknown3 < 1200000000) {
         int Hack;
     }
+    // Werte wie 2133073948, 2139127936 brauchen KEINEN Hack
+};
 };
 
 struct PackedDiskVert {
@@ -191,6 +199,12 @@ struct PBlockTable (int PolyCount) {
     int Unk3;
 
     local int Size = Unk1*Unk2*Unk3;
+    
+    // Wenn alle drei Werte 0 sind, abbrechen
+    if (Size == 0) {
+        Warning("PBlockTable Size is 0, skipping");
+        return;
+    }
     
     LTVector Unk4;
     LTVector Unk5;
@@ -293,15 +307,18 @@ struct TextureList {
 };
 
 struct WorldModel {
-    
-    
-
+    local int64 startPos = FTell();
     int NextWorldItem;
-    //char Padding2[32];
-    WorldBSP BSPData;
-
-    if (BSPData.Sections > 0) {
+    
+    // Prüfen ob NextWorldItem gültig ist
+    if (NextWorldItem > 0 && NextWorldItem < FileSize()) {
+        WorldBSP BSPData;
+        
+        // Immer zu NextWorldItem springen nach dem Lesen
+        // (NextWorldItem zeigt entweder auf nächstes Model oder ObjectHeader)
         FSeek(NextWorldItem);
+    } else {
+        Warning("Invalid NextWorldItem at position %Lx", startPos);
     }
 
 
