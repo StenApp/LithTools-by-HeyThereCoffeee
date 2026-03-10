@@ -464,15 +464,25 @@ class LTAWriter:
 				
 				var distance_node = edit_poly.create_child('dist', plane.distance)
 				
-				var texture_index = 0
-				var texture_name = "missing_texture"  # Default-Wert
-				texture_index = surface.texture_index
+				# var texture_index = 0
+				# var texture_name = "missing_texture"  # Default-Wert
+				# texture_index = surface.texture_index
 				
-				if texture_index >= 0 and texture_index < model.texture_list.size():
-					texture_name = model.texture_list[texture_index]
+				# if texture_index >= 0 and texture_index < model.texture_list.size():
+					# texture_name = model.texture_list[texture_index]
+				# else:
+					# push_error("Ungültiger globaler Texturindex: %d" % texture_index)
+					# texture_name = "missing_texture"
+					
+				var texture_name = "missing_texture"
+				var texture_index = surface.texture_index
+
+				if texture_index >= 0 and texture_index < world_model.texture_names.size():
+					texture_name = world_model.texture_names[texture_index].name
 				else:
-					push_error("Ungültiger globaler Texturindex: %d" % texture_index)
-					texture_name = "missing_texture"
+					push_error("Ungültiger Texturindex: %d (WorldModel '%s', %d Texturen)" % [
+						texture_index, world_model.world_name, world_model.texture_names.size()
+					])
 					
 				var texture_info_node = edit_poly.create_child('textureinfo')
 				
