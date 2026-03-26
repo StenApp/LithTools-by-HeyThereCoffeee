@@ -110,6 +110,47 @@ class LTANode:
 		output_string += ")\n"
 
 		return output_string
+		
+	func serialize_to_file(file):
+		# Iterativer Stack statt Rekursion
+		# Stack-Einträge: [node, child_index, phase]
+		# phase 0 = Header schreiben, phase 1 = Kinder abarbeiten, phase 2 = Footer schreiben
+		var stack = [[self, 0, 0]]
+		
+		while stack.size() > 0:
+			var entry = stack[stack.size() - 1]
+			var node = entry[0]
+			var child_idx = entry[1]
+			var phase = entry[2]
+			
+			if phase == 0:
+				# Header schreiben
+				for _i in range(node._depth):
+					file.store_string("\t")
+				file.store_string("(" + node._name + " ")
+				if node._attribute != null:
+					file.store_string(node._resolve_type(node._attribute))
+				if len(node._children) == 0:
+					file.store_string(")\n")
+					stack.pop_back()
+				else:
+					file.store_string("\n")
+					entry[2] = 1  # weiter zu Kindern
+			
+			elif phase == 1:
+				# Nächstes Kind verarbeiten
+				if child_idx < len(node._children):
+					entry[1] += 1  # child_idx erhöhen
+					stack.append([node._children[child_idx], 0, 0])
+				else:
+					entry[2] = 2  # alle Kinder fertig, Footer schreiben
+			
+			elif phase == 2:
+				# Footer schreiben
+				for _i in range(node._depth):
+					file.store_string("\t")
+				file.store_string(")\n")
+				stack.pop_back()	
 
 	func create_vector_node(values: Vector3):
 		var node = LTANode.new('vector')
@@ -464,18 +505,13 @@ class LTAWriter:
 				
 				var distance_node = edit_poly.create_child('dist', plane.distance)
 				
-				# var texture_index = 0
-				# var texture_name = "missing_texture"  # Default-Wert
-				# texture_index = surface.texture_index
-				
-				# if texture_index >= 0 and texture_index < model.texture_list.size():
-					# texture_name = model.texture_list[texture_index]
-				# else:
-					# push_error("Ungültiger globaler Texturindex: %d" % texture_index)
-					# texture_name = "missing_texture"
-					
 				var texture_name = "missing_texture"
-				var texture_index = surface.texture_index
+				var texture_index = 0
+
+				if "texture_index" in poly:
+					texture_index = poly.texture_index
+				else:
+					texture_index = surface.texture_index
 
 				if texture_index >= 0 and texture_index < world_model.texture_names.size():
 					texture_name = world_model.texture_names[texture_index].name
@@ -591,7 +627,7 @@ class LTAWriter:
 
 		var file = File.new()
 		file.open(path, File.WRITE)
-		file.store_string(root_node.serialize())
+		root_node.serialize_to_file(file)  # statt file.store_string(root_node.serialize())
 		file.close()
 		
 		print("Finished serializing node list!")
@@ -633,7 +669,8 @@ class LTAWriter:
 #
 #		file.close()
 		
-		print("Finished writing missing textures!")
+		#print("Finished writing missing textures!")
+		print("Finished!")
 		
 		return OK
 
