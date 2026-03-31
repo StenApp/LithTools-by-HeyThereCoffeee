@@ -112,19 +112,14 @@ class LTANode:
 		return output_string
 		
 	func serialize_to_file(file):
-		# Iterativer Stack statt Rekursion
-		# Stack-Einträge: [node, child_index, phase]
-		# phase 0 = Header schreiben, phase 1 = Kinder abarbeiten, phase 2 = Footer schreiben
-		var stack = [[self, 0, 0]]
+		var stack = [{"node": self, "child_idx": 0, "phase": 0}]
 		
 		while stack.size() > 0:
-			var entry = stack[stack.size() - 1]
-			var node = entry[0]
-			var child_idx = entry[1]
-			var phase = entry[2]
+			var top = stack.size() - 1
+			var node = stack[top].node
+			var phase = stack[top].phase
 			
 			if phase == 0:
-				# Header schreiben
 				for _i in range(node._depth):
 					file.store_string("\t")
 				file.store_string("(" + node._name + " ")
@@ -135,22 +130,21 @@ class LTANode:
 					stack.pop_back()
 				else:
 					file.store_string("\n")
-					entry[2] = 1  # weiter zu Kindern
+					stack[top].phase = 1
 			
 			elif phase == 1:
-				# Nächstes Kind verarbeiten
+				var child_idx = stack[top].child_idx
 				if child_idx < len(node._children):
-					entry[1] += 1  # child_idx erhöhen
-					stack.append([node._children[child_idx], 0, 0])
+					stack[top].child_idx += 1
+					stack.append({"node": node._children[child_idx], "child_idx": 0, "phase": 0})
 				else:
-					entry[2] = 2  # alle Kinder fertig, Footer schreiben
+					stack[top].phase = 2
 			
 			elif phase == 2:
-				# Footer schreiben
 				for _i in range(node._depth):
 					file.store_string("\t")
 				file.store_string(")\n")
-				stack.pop_back()	
+				stack.pop_back()
 
 	func create_vector_node(values: Vector3):
 		var node = LTANode.new('vector')
