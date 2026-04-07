@@ -144,7 +144,7 @@ func build(source_file, options):
 	anim_player = process_animations(model, anim_player)
 	
 	#autoset camera to scene
-	#auto_frame_camera(root)
+	# called from ModelRendererController after add_child
 	
 	# Model aufrecht stellen:
 	#root.rotation_degrees = Vector3(0, 0, -90)
@@ -378,12 +378,14 @@ func fill_array_mesh(model, skeleton):
 
 		
 func build_skeleton(model, skeleton : Skeleton):
+	# Pass 1: add all bones first
+	for i in range(model.node_count):
+		var lt_node = model.nodes[i]
+		skeleton.add_bone(lt_node.name)
+	# Pass 2: set parents and rest transforms
 	for i in range(model.node_count):
 		var lt_node = model.nodes[i]
 		var bind_matrix = lt_node.bind_matrix
-		#print("Node " + lt_node.name + "\n - Index: " + str(lt_node.index) + "\n - Flags: " + str(lt_node.flags) + "\n - Child Count: " + str(lt_node.child_count))
-		skeleton.add_bone(lt_node.name)
-
 		if lt_node.parent != null:
 			skeleton.set_bone_parent(i, lt_node.parent.index)
 			bind_matrix = lt_node.parent.bind_matrix.inverse() * bind_matrix
@@ -433,7 +435,7 @@ func process_animations(model, anim_player : AnimationPlayer):
 	return anim_player
 # End Func
 
-func auto_frame_camera(model_root):
+func auto_frame_camera(model_root, camera = null):
 	# Berechne die Bounding Box des gesamten Models
 	var aabb = AABB()
 	var first_mesh = true

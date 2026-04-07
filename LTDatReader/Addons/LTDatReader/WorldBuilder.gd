@@ -6,6 +6,7 @@ var lta_writer = preload("res://Addons/LTDatReader/LTAWriter.gd").new()
 var dtx_reader = preload("res://Addons/DTXReader/TextureBuilder.gd").new()
 var texture_path = ""
 var debug_file = null
+var last_build_type = "level"  # "level", "model_ps2", "model_pc"
 
 const LIGHTMAP_ATLAS_SIZE = 2048.0#4096.0#2048.0
 
@@ -106,6 +107,7 @@ func build(source_file, options):
 		# Level-LTB erkennt man daran, dass diese 4 Bytes bereits 66 oder 4694 ergeben
 		if first32 == 66 or first32 == 4694:
 			print("Level-LTB (PS2) detected - processing with LTDatReader")
+			self.last_build_type = "level"
 			model = ltb_file.LTB_PS2.new()
 			file_extension = "ltb"
 
@@ -121,6 +123,7 @@ func build(source_file, options):
 				# PC D3D Model (NOLF2)
 				print("Loading PC LTB Model (v9)")
 				file.close()
+				self.last_build_type = "model_pc"
 				var ltb_pc_builder = load("res://addons/LTBReader/LTBModelBuilder_PC.gd").new()
 				return ltb_pc_builder.build(source_file, options)
 			
@@ -128,6 +131,7 @@ func build(source_file, options):
 				# PS2 Model
 				print("Loading PS2 LTB Model (v16)")
 				file.close()
+				self.last_build_type = "model_ps2"
 				var ltb_ps2_builder = load("res://addons/LTBReader/LTBModelBuilder.gd").new()
 				return ltb_ps2_builder.build(source_file, options)
 			
@@ -136,6 +140,7 @@ func build(source_file, options):
 				file.close()
 				return FAILED
 	else:
+		self.last_build_type = "level"
 		model = dat_file.DAT.new()	
 		
 	# Batched reading
