@@ -2,10 +2,6 @@ extends Node
 
 export  var single_thread_loading = true
 
-
-
-
-
 var loaded_file: LoadedFile
 
 var _model_builder = preload("res://Addons/ABCReader/ModelBuilder.gd").new()
@@ -39,9 +35,7 @@ func _ready():
 	loading_mutex = Mutex.new()
 	loading_thread = Thread.new()
 
-	
 	pass
-
 
 func on_file_load(path):
 	if loading:
@@ -50,11 +44,9 @@ func on_file_load(path):
 	if loading_thread.is_active():
 		loading_thread.wait_to_finish()
 	
-	
 	loading_mutex.lock()
 	
 	loading_screen.loading(true)
-	
 	
 	if self._loaded_file != null:
 		remove_child(self._loaded_file)
@@ -62,10 +54,7 @@ func on_file_load(path):
 		self._loaded_file.free()
 		self._loaded_file = null
 	
-	
-	
 	self._loaded_file_path = path
-	
 	
 	loading_mutex.unlock()
 	
@@ -76,7 +65,6 @@ func on_file_load(path):
 	else:
 		var response = loading_thread.start(self, "_threaded_load", path)
 		print("Thread returned ", response)
-
 
 func _threaded_load(path):
 	if not loading:
@@ -96,8 +84,6 @@ func _threaded_load(path):
 		file_mode = LoadedFile.FILE_ABC
 	elif ".dtx" in path.to_lower():
 		
-		
-		
 		var texture = self._texture_builder.build(path, [])
 		
 		if texture == null:
@@ -115,7 +101,6 @@ func _threaded_load(path):
 		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		tex_rect.anchor_right = 1
 		tex_rect.anchor_bottom = 1
-		
 		
 		var material = CanvasItemMaterial.new()
 		material.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
@@ -137,16 +122,11 @@ func _threaded_load(path):
 		
 		scene = PackedScene.new()
 		scene.pack(control)
-		
-		
+	
 		control.queue_free()
 	
 		file_mode = LoadedFile.FILE_DTX
 		raw_file = texture
-	
-		
-	
-
 	
 	if (scene == null):
 		
@@ -163,9 +143,6 @@ func _threaded_load(path):
 		loading = false
 		return
 	
-	
-	
-	
 	loading_mutex.lock()
 	
 	self.loaded_file.raw_data = raw_file
@@ -177,21 +154,14 @@ func _threaded_load(path):
 	else:
 		print("ERROR: Scene loading failed, got: ", scene)
 		return
-	
-	
-	
+
 	if file_mode != LoadedFile.FILE_DTX:
 		self._loaded_file.scale = Vector3(self.default_model_scale, self.default_model_scale, self.default_model_scale)
 	
-	
 	call_deferred("add_child", self._loaded_file)
-	
-	
-	
 	
 	if file_mode == LoadedFile.FILE_ABC:
 		self._loaded_file.on_attach(self._model_builder.model)
-		
 		
 		var anim_player: AnimationPlayer = self._loaded_file.get_child(1)
 		var anim_list = anim_player.get_animation_list()
@@ -199,15 +169,13 @@ func _threaded_load(path):
 	
 	loading_screen.loading(false)
 	
-	
 	self.loaded_file.set_opened_file(path)
 	self.loaded_file.set_file_mode(file_mode)
-	
 	
 	loading_mutex.unlock()
 	
 	loading = false
 	
-
 func _exit_tree():
-	loading_thread.wait_to_finish()
+	if loading_thread.is_active():
+		loading_thread.wait_to_finish()

@@ -153,7 +153,7 @@ func build(source_file, options):
 	scene.pack(root)
 	
 	# Clean up!
-	root.queue_free()
+	#root.queue_free()
 	
 	return scene
 

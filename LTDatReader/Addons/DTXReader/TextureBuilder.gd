@@ -21,5 +21,7 @@ func build(source_file, options):
 		return null
 		
 	var texture = ImageTexture.new()
-	texture.create_from_image(model.image)
+	if model.image.is_compressed():
+		model.image.decompress()
+	texture.create_from_image(model.image, ImageTexture.FLAGS_DEFAULT)
 	return texture

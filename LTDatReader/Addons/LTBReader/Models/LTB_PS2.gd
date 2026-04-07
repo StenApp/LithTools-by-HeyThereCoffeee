@@ -1,4 +1,3 @@
-class_name LTB
 
 # PS2 LTB Model Reader for Godot
 # Based on PS2 LTB Model Reader by Jake Breen
