@@ -571,7 +571,21 @@ class LTAWriter:
 				# Holy heck!
 				prop_list.create_prop_entry('bool', 'Solid', int( surface.flags & (1<<0) != 0 ))
 				prop_list.create_prop_entry('bool', 'Nonexistant', int( surface.flags & (1<<1) != 0 ))
-				prop_list.create_prop_entry('bool', 'Invisible', int( surface.flags & (1<<2) != 0 ))
+				#prop_list.create_prop_entry('bool', 'Invisible', int( surface.flags & (1<<2) != 0 ))
+				#Fix for translucent world models:
+				# Invisible just if all Faces of the WorldModel have Invisible.dtx
+				var all_invisible_dtx = true
+				for check_poly in world_model.polies:
+					var check_tex_idx = check_poly.texture_index if "texture_index" in check_poly else world_model.surfaces[check_poly.surface_index].texture_index
+					var check_tex_name = ""
+					if check_tex_idx >= 0 and check_tex_idx < world_model.texture_names.size():
+						check_tex_name = world_model.texture_names[check_tex_idx].name
+					if "invisible" not in check_tex_name.to_lower():
+						all_invisible_dtx = false
+						break
+
+				prop_list.create_prop_entry('bool', 'Invisible', int(all_invisible_dtx))
+				
 				prop_list.create_prop_entry('bool', 'Translucent', int( surface.flags & (1<<3) != 0 ))
 				prop_list.create_prop_entry('bool', 'SkyPortal', int( surface.flags & (1<<4) != 0 ))
 				prop_list.create_prop_entry('bool', 'FullyBright', int( surface.flags & (1<<5) != 0 ))
