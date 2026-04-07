@@ -28,6 +28,9 @@ func _ready():
 		print("Connected on_file_okay signal successfully")
 	else:
 		print("ERROR: on_file_load method not found in model_renderer_controller")
+	
+	# Rebuild menu when toggle options change (e.g. Export LTA label update)
+	model.connect("on_options_changed", self, "adjust_menus")
 
 func handle_incoming_pressed_signal(id):
 	var signal_hooks = model.signal_hooks

@@ -2,14 +2,22 @@ extends Node
 
 
 signal on_file_okay(path)
+signal on_options_changed()
 
 var file_dialog = FileDialog.new()
 var global_controller = null
 var loaded_file: LoadedFile
 
+const SETTINGS_PATH = "./settings.cfg"
+const SETTINGS_SECTION = "Worlds"
+const SETTINGS_KEY = "export_to_lta_on_load"
+
+var export_to_lta_on_load: bool = false
+
 
 var options = [
-	[0, "Open"], 
+	[0, "Open"],
+	[2, ""],   # placeholder – label set dynamically in _ready / _build_lta_label()
 ]
 
 var options_tex = [
@@ -17,12 +25,45 @@ var options_tex = [
 ]
 
 var signal_hooks = [
-	[0, "id_pressed", "on_file_open"], 
+	[0, "id_pressed", "on_file_open"],
+	[2, "id_pressed", "on_toggle_export_to_lta"],
 ]
 
 var signal_hooks_tex = [
 	[1, "id_pressed", "on_file_export"]
 ]
+
+
+func _build_lta_label() -> String:
+	return ("[x] Export LTA on Load" if export_to_lta_on_load else "[ ] Export LTA on Load")
+
+
+func _load_export_to_lta_setting():
+	var config = ConfigFile.new()
+	if config.load(SETTINGS_PATH) == OK:
+		export_to_lta_on_load = config.get_value(SETTINGS_SECTION, SETTINGS_KEY, false)
+	else:
+		export_to_lta_on_load = false
+	# Refresh label in options array
+	options[1][1] = _build_lta_label()
+
+
+func _save_export_to_lta_setting():
+	var config = ConfigFile.new()
+	# Load existing file first to preserve all other values
+	config.load(SETTINGS_PATH)
+	config.set_value(SETTINGS_SECTION, SETTINGS_KEY, export_to_lta_on_load)
+	var err = config.save(SETTINGS_PATH)
+	if err != OK:
+		push_error("FileMenuButton: Failed to save settings.cfg (err " + str(err) + ")")
+
+
+func on_toggle_export_to_lta():
+	export_to_lta_on_load = not export_to_lta_on_load
+	_save_export_to_lta_setting()
+	options[1][1] = _build_lta_label()
+	emit_signal("on_options_changed")
+
 
 func _ready():
 	global_controller = get_node("/root/Root/UI")
@@ -33,7 +74,7 @@ func _ready():
 	var events = get_node("/root/Events")
 	events.connect("on_file_mode_changed", self, "on_file_mode_changed")
 	
-	
+	_load_export_to_lta_setting()
 	
 	self.file_dialog.access = self.file_dialog.ACCESS_FILESYSTEM
 	add_child(file_dialog)
