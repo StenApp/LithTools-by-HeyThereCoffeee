@@ -33,7 +33,7 @@ var signal_hooks_tex = [
 ]
 
 func _build_lta_label() -> String:
-	return ("[x] Export LTA on Load" if export_to_lta_on_load else "[ ] Export LTA on Load")
+	return ("[x] Export Level as LTA on Load" if export_to_lta_on_load else "[ ] Export Level as LTA on Load")
 
 func _load_export_to_lta_setting():
 	var config = ConfigFile.new()
