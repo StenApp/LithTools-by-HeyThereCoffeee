@@ -580,7 +580,7 @@ class LTAWriter:
 					var check_tex_name = ""
 					if check_tex_idx >= 0 and check_tex_idx < world_model.texture_names.size():
 						check_tex_name = world_model.texture_names[check_tex_idx].name
-					if "invisible" not in check_tex_name.to_lower():
+					if not ("invisible" in check_tex_name.to_lower()):
 						all_invisible_dtx = false
 						break
 
