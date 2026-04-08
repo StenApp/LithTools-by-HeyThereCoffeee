@@ -30,22 +30,27 @@ func _ready():
 
 
 func on_toggle_alpha():
-	var packed_scene = self.loaded_file.scene as PackedScene
-	assert (packed_scene)
-	
-	var scene = packed_scene.instance()
-	
-	
-	var texture_rect = scene.get_child(1) as TextureRect
-	var blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	
+	# Alpha-Modus: bg ausblenden + BLEND_MODE_PREMULT_ALPHA zeigt Alphakanal
+	var model_renderer = get_node_or_null("/root/Root/UI/ModelRenderer")
+	if model_renderer == null:
+		return
+	var displayed = model_renderer._loaded_file
+	if displayed == null:
+		return
+	var bg = displayed.get_child(0) as ColorRect
+	var tex_rect = displayed.get_child(1) as TextureRect
+	if bg == null or tex_rect == null or tex_rect.material == null:
+		return
+	if self.loaded_file.is_fullbrite:
+		print("[Toggle Alpha] Texture has DTX_FULLBRITE - no real alpha channel.")
+		return
+	is_alpha_on = not is_alpha_on
 	if is_alpha_on:
-		is_alpha_on = false
-		blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
+		bg.visible = false
+		tex_rect.material.blend_mode = CanvasItemMaterial.BLEND_MODE_PREMULT_ALPHA
 	else:
-		is_alpha_on = true
-	
-	texture_rect.material.blend_mode = blend_mode
+		bg.visible = true
+		tex_rect.material.blend_mode = CanvasItemMaterial.BLEND_MODE_MIX
 	
 	
 	

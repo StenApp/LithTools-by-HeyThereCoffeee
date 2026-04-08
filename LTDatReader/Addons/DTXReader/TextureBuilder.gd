@@ -1,5 +1,7 @@
 extends Node
 
+var last_flags = 0
+
 func build(source_file, options):
 	var file = File.new()
 	
@@ -19,6 +21,7 @@ func build(source_file, options):
 	
 	if response.code == model.IMPORT_RETURN.ERROR:
 		return null
+	self.last_flags = model.flags
 		
 	var texture = ImageTexture.new()
 	if model.image.is_compressed():

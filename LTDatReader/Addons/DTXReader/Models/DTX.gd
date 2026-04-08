@@ -32,7 +32,22 @@ class DTX:
 	
 	const DTX_COMMANDSTRING_LENGTH = 128
 
-	# Not used in version DTX_VERSION_LT1?
+	# Pixel format identifiers (BPPIdent from pixelformat.h)
+	# g_PixelBytes[] = {1, 1, 2, 4, 0, 0, 0, 1, 3} (bytes per pixel)
+	# Special: m_Extra[2]==0 in header means BPP_32, not BPP_8P (see GetBPPIdent())
+	#
+	# Wert | Name          | Bytes/Pixel | Format            | Spiele
+	# -----+---------------+-------------+-------------------+------------------
+	#   0  | BPP_8P        | 1 (index)   | 8-bit palettiert  | LT1/LT1.5 (Blood2, Shogo)
+	#   1  | BPP_8         | 1           | 8-bit Graustufen  | LT1/LT1.5
+	#   2  | BPP_16        | 2           | RGB565            | LT1/LT1.5
+	#   3  | BPP_32        | 4           | BGRA 32-bit       | NOLF1/2 (haeufigstes Format)
+	#   4  | BPP_S3TC_DXT1 | w*h/2       | DXT1 komprimiert  | NOLF1/2
+	#   5  | BPP_S3TC_DXT3 | w*h         | DXT3 komprimiert  | NOLF1/2
+	#   6  | BPP_S3TC_DXT5 | w*h         | DXT5 komprimiert  | NOLF1/2
+	#   7  | BPP_32P       | 1 (index)   | 32-bit Palette    | NOLF1 PS2
+	#   8  | BPP_24        | 3           | BGR 24-bit        | selten
+	
 	const BPP_8P = 0
 	const BPP_8 = 1
 	const BPP_16 = 2
@@ -41,6 +56,7 @@ class DTX:
 	const BPP_S3TC_DXT3 = 5
 	const BPP_S3TC_DXT5 = 6
 	const BPP_32P = 7
+	const BPP_24 = 8
 	
 	# Header
 	var resource_type = 0
@@ -119,25 +135,46 @@ class DTX:
 		
 	# End Func
 	
+	# Entspricht DtxHeader::GetBPPIdent() aus dtxmgr.h:
+	# m_Extra[2]==0 bedeutet BPP_32 (nicht BPP_8P!).
+	# Hintergrund: SetBPPIdent(BPP_32) schreibt 3, GetBPPIdent() gibt bei 0 als Default BPP_32 zurueck.
+	func get_bpp_ident() -> int:
+		return BPP_32 if self.bytes_per_pixel == 0 else self.bytes_per_pixel
+
 	func read_texture_data(f : File):
 		var image = null
+		var bpp = self.get_bpp_ident()
 		
 		# Version check must come before everything else!!
-		if [DTX_VERSION_LT1, DTX_VERSION_LT15].has(self.version) or self.bytes_per_pixel == BPP_8P:
+		if [DTX_VERSION_LT1, DTX_VERSION_LT15].has(self.version):
 			image = self.read_8bit_palette(f)
-		elif [BPP_S3TC_DXT1, BPP_S3TC_DXT3, BPP_S3TC_DXT5].has(self.bytes_per_pixel):
+		elif bpp == BPP_8P:
+			image = self.read_8bit_palette(f)
+		elif [BPP_S3TC_DXT1, BPP_S3TC_DXT3, BPP_S3TC_DXT5].has(bpp):
 			image = self.read_compressed(f)
-		elif self.bytes_per_pixel == BPP_32:
+		elif bpp == BPP_32:
 			image = self.read_32bit_texture(f)
-		elif self.bytes_per_pixel == BPP_32P:
+		elif bpp == BPP_32P:
 			image = self.read_32bit_palette(f)
-			
+		elif bpp == BPP_8:
+			image = self.read_8bit_greyscale(f)
+		elif bpp == BPP_16:
+			image = self.read_16bit_texture(f)
+		elif bpp == BPP_24:
+			image = self.read_24bit_texture(f)
+		else:
+			print("DTX: Unsupported BPP: ", bpp)
+		
 		return image
 		
 	#
 	# Read in a DXT compressed texture
 	# Godot does the heavy lifting here!
 	#
+	# BPP_S3TC_DXT1/3/5: S3TC-komprimiert
+	# CalcImageSize: DXT1 = w*h/2, DXT3/5 = w*h bytes
+	# Quelle: pixelformat.cpp CalcImageSize()
+	
 	func read_compressed(f : File):
 		var image = Image.new()
 		
@@ -145,10 +182,11 @@ class DTX:
 		var format = Image.FORMAT_DXT1
 		var scale = 8 # Extra bytes needed in the decoding process
 		
-		if self.bytes_per_pixel == BPP_S3TC_DXT3:
+		var bpp_dxt = self.get_bpp_ident()
+		if bpp_dxt == BPP_S3TC_DXT3:
 			format = Image.FORMAT_DXT3
 			scale = 16
-		elif self.bytes_per_pixel == BPP_S3TC_DXT5:
+		elif bpp_dxt == BPP_S3TC_DXT5:
 			format = Image.FORMAT_DXT5
 			scale = 16
 			
@@ -162,6 +200,8 @@ class DTX:
 		return image
 		
 	
+	# BPP_32: 4 bytes/pixel, gespeichert als BGRA, Alpha=0 bei Fullbrite-Texturen
+	# Quelle: dtxmgr.cpp dtx_Create(), dtx_RevRGBOrder() nur auf PS2
 	func read_32bit_texture(f : File):
 		var image = Image.new()
 		var raw_data = f.get_buffer(self.width * self.height * 4)
@@ -175,11 +215,11 @@ class DTX:
 			var b = raw_data[i + 2] # What we think is Blue
 			var a = raw_data[i + 3] # Alpha
 			
-			# Swap red and blue: R<->B
-			rgba_data.append(b)  # Put blue in red channel
-			rgba_data.append(g)  # Keep green
-			rgba_data.append(r)  # Put red in blue channel  
-			rgba_data.append(a)  # Keep alpha
+			# BGRA -> RGBA swap, keep original alpha
+			rgba_data.append(b)
+			rgba_data.append(g)
+			rgba_data.append(r)
+			rgba_data.append(a)
 			
 			i += 4
 		
@@ -187,53 +227,42 @@ class DTX:
 		return image
 	# End Func
 		
-	#
-	# Read in a 32-bit palettized texture
-	# I've only seen these used with the PS2 version of NOLF
-	# 
+	# BPP_32P: 1 byte/pixel Index, Palette als Section-Data gespeichert
+	# pitch = width (1 byte/pixel), Palette = 256 * 4 bytes BGRA
+	# Quelle: dtxmgr.cpp dtx_Alloc() (pitch=width), dtx_Create() (sections)
+	# SectionHeader: char m_Type[15] + char m_Name[10] + uint32 m_DataLen = 29 bytes
 	func read_32bit_palette(f : File):
 		var image = Image.new()
 		var palette = []
 		
-		var data = f.get_buffer(self.width * self.height * 1)
+		# Read main mipmap pixel indices (1 byte/pixel, BPP_32P pitch = width)
+		var data = f.get_buffer(self.width * self.height)
 		var colour_data = PoolByteArray()
 		
-		# TODO: Actually use this
-		# We need to skip past the mipmaps!
-		var width = self.width
-		var height = self.height
+		# Skip remaining mipmaps (each also 1 byte/pixel)
+		var mip_width = self.width
+		var mip_height = self.height
 		for _i in range(self.mipmap_count - 1):
-			width /= 2
-			height /= 2
-			# Read in mipmap data
-			var _unused = f.get_buffer(width * height * 1)
-		# End For
+			mip_width /= 2
+			mip_height /= 2
+			f.get_buffer(mip_width * mip_height)
 		
-		# Hopefully never have to deal with this, but let's be careful.
-		if self.section_count != 1:
-			print("Section count is not 1, even though we're a 32bit palette texture! Count: ", self.section_count)
+		# Read sections - palette is stored as section data
+		# SectionHeader: char m_Type[15] + char m_Name[10] + uint32 m_DataLen = 29 bytes
+		for _s in range(self.section_count):
+			var _section_type = f.get_buffer(15)
+			var _section_name = f.get_buffer(10)
+			var section_length = f.get_32()
+			var palette_entries = section_length / 4  # 4 bytes per BGRA entry
+			for _i in range(palette_entries):
+				var packed_data = f.get_32()
+				var unpacked = self.convert_32_to_8_bit(packed_data)
+				palette.append(Quat(unpacked.x, unpacked.y, unpacked.z, unpacked.w))
+		
+		if palette.size() == 0:
+			print("DTX BPP_32P: No palette found in sections (section_count=", self.section_count, ")")
 			return null
-			
-		# Useless bits!
-		var _section_type = f.get_buffer(16)
-		var _section_unk = f.get_buffer(12) # 10 bytes, and skip 2 filler bytes!
-		var _section_length = f.get_32()
 		
-		# Handle the palette - 32-bit packed BRGA colors
-		for _i in range(256):
-			# Here's the 32-bit part. Colour data is packed, so unpack it!
-			var packed_data = f.get_32()
-			var unpacked_data = self.convert_32_to_8_bit(packed_data)
-			
-			var r = unpacked_data.x
-			var g = unpacked_data.y
-			var b = unpacked_data.z
-			var a = unpacked_data.w
-
-			# Quat so we can use 0-255, stupid Color...
-			palette.append( Quat(r, g, b, a) )
-		# End For
-
 		var i = 0
 
 		# Apply the palette
@@ -291,6 +320,55 @@ class DTX:
 		return image
 	# End Func
 		
+	# BPP_8: 8-bit greyscale, 1 byte/pixel
+	func read_8bit_greyscale(f : File):
+		var image = Image.new()
+		var data = f.get_buffer(self.width * self.height)
+		var rgba = PoolByteArray()
+		for i in range(data.size()):
+			var v = data[i]
+			rgba.append(v)
+			rgba.append(v)
+			rgba.append(v)
+			rgba.append(255)
+		image.create_from_data(self.width, self.height, false, Image.FORMAT_RGBA8, rgba)
+		return image
+
+	# BPP_16: RGB565, 2 bytes/pixel
+	# Masks: R=0xF800, G=0x07E0, B=0x001F
+	func read_16bit_texture(f : File):
+		var image = Image.new()
+		var data = f.get_buffer(self.width * self.height * 2)
+		var rgba = PoolByteArray()
+		var i = 0
+		while i < data.size():
+			var pixel = data[i] | (data[i+1] << 8)
+			var r = ((pixel >> 11) & 0x1F) * 255 / 31
+			var g = ((pixel >> 5)  & 0x3F) * 255 / 63
+			var b = (pixel & 0x1F) * 255 / 31
+			rgba.append(r)
+			rgba.append(g)
+			rgba.append(b)
+			rgba.append(255)
+			i += 2
+		image.create_from_data(self.width, self.height, false, Image.FORMAT_RGBA8, rgba)
+		return image
+
+	# BPP_24: RGB, 3 bytes/pixel
+	func read_24bit_texture(f : File):
+		var image = Image.new()
+		var data = f.get_buffer(self.width * self.height * 3)
+		var rgba = PoolByteArray()
+		var i = 0
+		while i < data.size():
+			rgba.append(data[i+2])  # R (BGR->RGB)
+			rgba.append(data[i+1])  # G
+			rgba.append(data[i])    # B
+			rgba.append(255)
+			i += 3
+		image.create_from_data(self.width, self.height, false, Image.FORMAT_RGBA8, rgba)
+		return image
+
 	#
 	# Helpers
 	# 

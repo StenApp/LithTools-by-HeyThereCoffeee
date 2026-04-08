@@ -49,8 +49,8 @@ func on_file_load(path):
 	loading_screen.loading(true)
 	
 	if self._loaded_file != null:
-		get_node("/root/Root").remove_child(self._loaded_file)
-		
+		if self._loaded_file.get_parent() != null:
+			self._loaded_file.get_parent().remove_child(self._loaded_file)
 		self._loaded_file.free()
 		self._loaded_file = null
 	
@@ -123,13 +123,13 @@ func _threaded_load(path):
 		bg.owner = control
 		tex_rect.owner = control
 		
-		scene = PackedScene.new()
-		scene.pack(control)
-	
-		control.queue_free()
+		# Use control directly - no PackedScene needed for DTX
+		scene = control
 	
 		file_mode = LoadedFile.FILE_DTX
 		raw_file = texture
+		# DTX_FULLBRITE = bit 0 in flags
+		self.loaded_file.is_fullbrite = (self._texture_builder.last_flags & 1) != 0
 	
 	if (scene == null):
 		
@@ -151,9 +151,10 @@ func _threaded_load(path):
 	self.loaded_file.raw_data = raw_file
 	self.loaded_file.scene = scene
 	
-	#self._loaded_file = scene.instance()
 	if scene is PackedScene:
 		self._loaded_file = scene.instance()
+	elif scene is Control or scene is Spatial:
+		self._loaded_file = scene  # DTX: Control direkt
 	else:
 		print("ERROR: Scene loading failed, got: ", scene)
 		return
@@ -161,11 +162,17 @@ func _threaded_load(path):
 	if file_mode != LoadedFile.FILE_DTX:
 		self._loaded_file.scale = Vector3(self.default_model_scale, self.default_model_scale, self.default_model_scale)
 	
-	get_node("/root/Root").add_child(self._loaded_file)
+	if file_mode == LoadedFile.FILE_DTX:
+		add_child(self._loaded_file)  # DTX als 2D-Control unter ModelRenderer
+	else:
+		get_node("/root/Root").add_child(self._loaded_file)  # 3D unter Root
 	
 	if file_mode == LoadedFile.FILE_ABC:
-		var camera = get_node_or_null("/root/Root/FreeLook")
-		auto_frame_camera(self._loaded_file, camera)
+		auto_frame_camera(self._loaded_file)
+	else:
+		var freelook = get_node_or_null("/root/Root/FreeLook")
+		if freelook != null:
+			freelook.make_current()
 	if file_mode == LoadedFile.FILE_ABC:
 		# on_attach only for real ABC files, not LTB models
 		if ".abc" in path.to_lower():
@@ -184,9 +191,7 @@ func _threaded_load(path):
 	
 	loading = false
 	
-func auto_frame_camera(model_root, camera):
-	if camera == null:
-		return
+func auto_frame_camera(model_root):
 	var aabb = AABB()
 	var first_mesh = true
 	var queue = [model_root]
@@ -206,25 +211,17 @@ func auto_frame_camera(model_root, camera):
 	var center = aabb.position + aabb.size * 0.5
 	var size = aabb.size.length()
 	var dist = size * 0.8
-	# Determine which axis is "up" based on longest AABB dimension
-	var sx = aabb.size.x
-	var sy = aabb.size.y
-	var sz = aabb.size.z
-	var up = Vector3.UP
-	var cam_offset
-	if sy >= sx and sy >= sz:
-		# Model stands upright on Y - camera in front on Z
-		cam_offset = Vector3(0.0, dist * 0.1, dist)
-	elif sz >= sx and sz >= sy:
-		# Model lies along Z - camera above, looking down Z
-		cam_offset = Vector3(0.0, dist, dist * 0.1)
-		up = Vector3(0.0, 0.0, -1.0)
-	else:
-		# Model lies along X - camera above, looking down, head towards -Z
-		cam_offset = Vector3(0.0, dist, 0.0)
-		up = Vector3(0.0, 0.0, -1.0)
-	camera.global_transform.origin = center + cam_offset
-	camera.look_at(center, up)
+	# Move model so AABB center is at origin - trackball rotates around origin
+	model_root.global_transform.origin -= center
+	# Switch to trackball camera for free rotation
+	var trackball = get_node_or_null("/root/Root/Camera")
+	var freelook = get_node_or_null("/root/Root/FreeLook")
+	if trackball != null:
+		trackball.global_transform.origin = Vector3(0.0, 0.0, dist)
+		trackball.look_at(Vector3.ZERO, Vector3.UP)
+		trackball.make_current()
+	if freelook != null:
+		freelook.clear_current(false)
 
 func _exit_tree():
 	if loading_thread.is_active():

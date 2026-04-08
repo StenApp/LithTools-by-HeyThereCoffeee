@@ -10,6 +10,7 @@ var file_mode = self.FILE_NONE
 
 var scene: PackedScene
 var raw_data = null
+var is_fullbrite = false
 
 
 func _ready():
@@ -21,6 +22,7 @@ func clear():
 	self.file_mode = self.FILE_NONE
 	self.scene = null
 	self.raw_data = null
+	self.is_fullbrite = false
 
 
 func set_opened_file(value):
