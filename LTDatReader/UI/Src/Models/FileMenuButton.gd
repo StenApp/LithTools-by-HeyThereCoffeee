@@ -92,7 +92,8 @@ func _ready():
 	add_child(file_dialog)
 
 func on_file_open():
-	self.file_dialog.connect("file_selected", self, "on_file_selected")
+	if not self.file_dialog.is_connected("file_selected", self, "on_file_selected"):
+		self.file_dialog.connect("file_selected", self, "on_file_selected")
 	self.file_dialog.mode = self.file_dialog.MODE_OPEN_FILE
 	
 	# Filter für unterstützte Dateitypen
@@ -104,6 +105,7 @@ func on_file_open():
 		#"* ; All Files"
 	]))
 	
+	self.file_dialog.rect_position = Vector2(0, 0)
 	self.file_dialog.popup_centered_ratio(0.5)
 
 func on_file_export():
@@ -111,9 +113,13 @@ func on_file_export():
 		print("Can only export DTX!")
 		return
 	
-	self.file_dialog.connect("file_selected", self, "on_file_selected_for_export_to_png")
+	if not self.file_dialog.is_connected("file_selected", self, "on_file_selected_for_export_to_png"):
+		self.file_dialog.connect("file_selected", self, "on_file_selected_for_export_to_png")
+	if not self.file_dialog.is_connected("popup_hide", self, "on_export_png_cancelled"):
+		self.file_dialog.connect("popup_hide", self, "on_export_png_cancelled")
 	self.file_dialog.mode = self.file_dialog.MODE_SAVE_FILE
 	self.file_dialog.set_filters(PoolStringArray(["*.png ; Portable Network Graphics"]))
+	self.file_dialog.rect_position = Vector2(0, 0)
 	self.file_dialog.popup_centered_ratio(0.5)
 
 func on_file_selected(path):
@@ -123,15 +129,22 @@ func on_file_selected(path):
 	self.file_dialog.disconnect("file_selected", self, "on_file_selected")
 
 func on_file_selected_for_export_to_png(path):
-	
 	var image = self.loaded_file.raw_data as ImageTexture
-	
+	if image == null:
+		print("Export failed: no image loaded or not a DTX file.")
+		return
 	if image.get_data().save_png(path) == OK:
 		print("Exported as png to: " + path)
 	else:
 		print("Failed to save as png :(")
 	
 	self.file_dialog.disconnect("file_selected", self, "on_file_selected_for_export_to_png")
+
+func on_export_png_cancelled():
+	if self.file_dialog.is_connected("file_selected", self, "on_file_selected_for_export_to_png"):
+		self.file_dialog.disconnect("file_selected", self, "on_file_selected_for_export_to_png")
+	if self.file_dialog.is_connected("popup_hide", self, "on_export_png_cancelled"):
+		self.file_dialog.disconnect("popup_hide", self, "on_export_png_cancelled")
 
 func on_file_mode_changed(args):
 	var file_mode = args[0]

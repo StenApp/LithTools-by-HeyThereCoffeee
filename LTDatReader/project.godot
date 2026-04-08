@@ -73,5 +73,4 @@ zoom_in={
 quality/driver/driver_name="GLES2"
 quality/filters/anisotropic_filter_level=16
 quality/filters/msaa=2
-quality/filters/use_debanding=true
 environment/default_environment="res://default_env.tres"
