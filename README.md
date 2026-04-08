@@ -1,4 +1,12 @@
-Decompiled version of LithTools by HeyThereCoffeee to fix NOLF1 PS2 levels and texture loading, inclusive model viewing.
+Decompiled version of LithTools by HeyThereCoffeee
+
+  -primarily fixed is the NOLF PS2 stuff like Level, Model and Texture viewing
+  
+  -LTA exporting of levels PC and PS2
+  
+  -viewing of Models in abc/ltb format (tested with NOLF1, NOLF2)
+  
+  -viewing of Levels dat and ltb format (NOLF1 PS2, NOLF1 PC, NOLF2)
 
 Set up folder containing textures (tex folder) in settings.cfg in LTDatReader folder.
 
