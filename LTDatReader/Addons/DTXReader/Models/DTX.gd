@@ -47,7 +47,6 @@ class DTX:
 	#   6  | BPP_S3TC_DXT5 | w*h         | DXT5 komprimiert  | NOLF1/2
 	#   7  | BPP_32P       | 1 (index)   | 32-bit Palette    | NOLF1 PS2
 	#   8  | BPP_24        | 3           | BGR 24-bit        | selten
-	
 	const BPP_8P = 0
 	const BPP_8 = 1
 	const BPP_16 = 2
@@ -174,7 +173,6 @@ class DTX:
 	# BPP_S3TC_DXT1/3/5: S3TC-komprimiert
 	# CalcImageSize: DXT1 = w*h/2, DXT3/5 = w*h bytes
 	# Quelle: pixelformat.cpp CalcImageSize()
-	
 	func read_compressed(f : File):
 		var image = Image.new()
 		
@@ -215,11 +213,11 @@ class DTX:
 			var b = raw_data[i + 2] # What we think is Blue
 			var a = raw_data[i + 3] # Alpha
 			
-			# BGRA -> RGBA swap, keep original alpha
+			# BGRA -> RGBA swap, force alpha=255 if 0 (fullbrite textures)
 			rgba_data.append(b)
 			rgba_data.append(g)
 			rgba_data.append(r)
-			rgba_data.append(a)
+			rgba_data.append(255 if a == 0 else a)
 			
 			i += 4
 		
@@ -250,8 +248,11 @@ class DTX:
 		# Read sections - palette is stored as section data
 		# SectionHeader: char m_Type[15] + char m_Name[10] + uint32 m_DataLen = 29 bytes
 		for _s in range(self.section_count):
+			# Section header = 32 bytes total:
+			# m_Type (15) + padding (13) + m_DataLen (4)
+			# Verified empirically with ps2_baron_action_hat.dtx and hero_thief.dtx
 			var _section_type = f.get_buffer(15)
-			var _section_name = f.get_buffer(10)
+			var _section_padding = f.get_buffer(13)
 			var section_length = f.get_32()
 			var palette_entries = section_length / 4  # 4 bytes per BGRA entry
 			for _i in range(palette_entries):
