@@ -2,6 +2,8 @@ tool
 
 extends Node
 
+var export_to_lta = false
+
 var lta_writer = preload("res://Addons/LTDatReader/LTAWriter.gd").new()
 var dtx_reader = preload("res://Addons/DTXReader/TextureBuilder.gd").new()
 var texture_path = ""
@@ -20,36 +22,7 @@ func chunk(array, by):
 		
 	return chunks
 
-# func build(source_file, options):
-	# var file = File.new()
-	# if file.open(source_file, File.READ) != OK:
-		# print("Failed to open " + source_file)
-		# return FAILED
-		
-	# print("Opened " + source_file)
-	
-	# var dat_file = load("res://Addons/LTDatReader/Models/DAT.gd")
-	# var ltb_file = load("res://Addons/LTDatReader/Models/LTB_PS2.gd")
-	
-	# # Setup our new scene
-	# var scene = PackedScene.new()
-	
-	# # Create our nodes
-	# var root = Spatial.new()
-	
-	# # Setup the nodes
-	# root.name = "Root"
-	
-	# var model = null
-	# var file_extension = "dat"
-	# # Model as in MVC model, not mesh model!
-	# if ".ltb" in source_file.to_lower():
-		# model = ltb_file.LTB_PS2.new()
-		# file_extension = "ltb"
-	# else:
-		# model = dat_file.DAT.new()
-	
-	
+
 func build(source_file, options):
 	var file = File.new()
 	if file.open(source_file, File.READ) != OK:
@@ -62,43 +35,13 @@ func build(source_file, options):
 	var ltb_file = load("res://Addons/LTDatReader/Models/LTB_PS2.gd")
 	
 	# Setup our new scene FIRST
-	var scene = PackedScene.new()
+	var scene = null
 	var root = Spatial.new()
 	root.name = "Root"
 	
 	var model = null
 	var file_extension = "dat"
 	
-	# # Model as in MVC model, not mesh model!
-	# if ".ltb" in source_file.to_lower():
-		# # Check LTB version to determine type
-		# var file_type = file.get_32()  # Skip file type
-		# var version = file.get_16()
-		# file.seek(0)  # Back to beginning
-		
-		# print("LTB Version detected: ", version)
-		
-		# if version == 66 || version == 4694:
-			# # Level-LTB (PS2) → Process with LTDatReader
-			# print("Level-LTB (PS2) detected - processing with LTDatReader")
-			# model = ltb_file.LTB_PS2.new()
-			# file_extension = "ltb"
-		# elif version == 2 || version == 16:  # BEIDE Model-Versionen!
-			# # Model-LTB (NOLF1 PC = v2, NOLF PS2 = v16) → Delegate to LTBReader
-			# print("Model-LTB (version ", version, ") detected - delegating to LTBReader")
-			# file.close()
-			
-			# # Load and call LTBReader directly
-			# var ltb_model_builder = load("res://addons/LTBReader/LTBModelBuilder.gd").new()
-			# return ltb_model_builder.build(source_file, options)
-		# else:
-			# print("Unknown LTB version: ", version)
-			# file.close()
-			# return FAILED
-	# else:
-		# # DAT file
-		# model = dat_file.DAT.new()
-		
 	if ".ltb" in source_file.to_lower():
 		# Peek first 4 bytes
 		var first32 = file.get_32()
@@ -156,12 +99,11 @@ func build(source_file, options):
 	# Fallback...
 	texture_path = "D:\\Games\\Aliens vs. Predator 2 - dev\\AVP2\\"
 	
-	var export_to_lta = false
+	var export_to_lta = self.export_to_lta
 	
 	if err == OK:
 		var game_path_string = file_extension + "_v" + str(model.version) + "_game_path"
 		texture_path = config.get_value("Worlds", game_path_string, texture_path)
-		export_to_lta = config.get_value("Worlds", "export_to_lta_on_load", false)
 		
 	var world_model_count = model.world_model_count
 	
@@ -193,7 +135,6 @@ func build(source_file, options):
 			lm_image_texture.create_from_image(lm_texture_array)
 			lm_image_texture.set_flags(ImageTexture.FLAGS_DEFAULT + ImageTexture.FLAG_ANISOTROPIC_FILTER + ImageTexture.FLAG_CONVERT_TO_LINEAR)
 			
-		var cached_textures = {}
 		
 		var i = 0;
 		for mesh in meshes:
@@ -242,7 +183,6 @@ func build(source_file, options):
 
 		#lm_image_texture.set_flags(ImageTexture.FLAGS_DEFAULT + ImageTexture.FLAG_ANISOTROPIC_FILTER + ImageTexture.FLAG_CONVERT_TO_LINEAR)
 		
-		var cached_textures = {}
 		
 		var i = 0;
 		for mesh in meshes:
@@ -290,14 +230,11 @@ func build(source_file, options):
 			var lm_texture_array = data[3] as Image#[0] # data[3] = [ tex array, last used depth ]
 
 			# Loop through our pieces, and add them to mesh instances
-			lm_texture_array.save_png("lm_null.png")
-			
 			var lm_image_texture = ImageTexture.new()
 			lm_image_texture.create_from_image(lm_texture_array)
 			lm_image_texture.set_flags(ImageTexture.FLAGS_DEFAULT + ImageTexture.FLAG_ANISOTROPIC_FILTER + ImageTexture.FLAG_CONVERT_TO_LINEAR)
 			
-			var cached_textures = {}
-			
+				
 			var i = 0;
 			for mesh in meshes:
 				
@@ -325,7 +262,7 @@ func build(source_file, options):
 			# End For
 		
 	# Pack our scene!
-	scene.pack(root)
+	scene = root
 	
 	print("Total Meshes Generated: " + str(total_mesh_count))
 	
@@ -344,7 +281,7 @@ func build(source_file, options):
 			return FAILED
 
 	# Now that we've packed root into the scene, it's time to clean it up!
-	root.queue_free()
+	# root is returned directly, not freed
 
 	clear_texture_cache()
 	
@@ -908,6 +845,7 @@ func fill_array_mesh_jupiter(model, world_meshes = []):
 	pass
 
 func fill_array_mesh(model, world_models = []):
+	print("DEBUG fill_array_mesh called, world_models count: ", len(world_models))
 
 	var mesh_names = []
 	var meshes = []
@@ -924,9 +862,10 @@ func fill_array_mesh(model, world_models = []):
 	white_image.create(2,2, false, Image.FORMAT_RGB8)
 	white_image.fill(Color(1.0, 1.0, 1.0, 1.0))
 	
+	print("DEBUG creating big_lightmap_image...")
 	big_lightmap_image.create(LIGHTMAP_ATLAS_SIZE, LIGHTMAP_ATLAS_SIZE, false, Image.FORMAT_RGB8)
 	big_lightmap_image.blit_rect(white_image, Rect2(Vector2(0,0), Vector2(2,2)), Vector2(LIGHTMAP_ATLAS_SIZE - 2, LIGHTMAP_ATLAS_SIZE - 2))
-
+	print("DEBUG big_lightmap_image done")
 
 	var skip_models = [
 	"VisBSP",
@@ -934,6 +873,7 @@ func fill_array_mesh(model, world_models = []):
 	
 	for world_model_index in range(len(world_models)):
 		var world_model = world_models[world_model_index]
+		print("DEBUG wm loop: ", world_model.world_name)
 		
 		if world_model.world_name in skip_models:
 			print("Skipping " + world_model.world_name)
@@ -1210,7 +1150,7 @@ func fill_array_mesh(model, world_models = []):
 			
 			lightmap_frame_index += 1
 		
-		big_lightmap_image.save_png("./lm_atlas.png")
+		# big_lightmap_image.save_png("./lm_atlas.png")  # disabled: called per world model
 		
 	var data = build_array_mesh(textured_meshes)
 	meshes += data[0]

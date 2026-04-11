@@ -1,6 +1,6 @@
 extends Node
 
-export  var single_thread_loading = true
+export  var single_thread_loading = false
 
 var loaded_file: LoadedFile
 
@@ -33,6 +33,10 @@ func _ready():
 	self.loaded_file = get_node("/root/LoadedFile")
 	
 	loading_mutex = Mutex.new()
+	# Sync export_to_lta toggle from FileMenuButton to WorldBuilder
+	var file_menu = get_node_or_null("/root/Root/UI/FileMenu")
+	if file_menu != null and file_menu.model != null:
+		file_menu.model.connect("on_options_changed", self, "on_export_lta_changed", [file_menu.model])
 	loading_thread = Thread.new()
 
 	pass
@@ -153,8 +157,8 @@ func _threaded_load(path):
 	
 	if scene is PackedScene:
 		self._loaded_file = scene.instance()
-	elif scene is Control or scene is Spatial:
-		self._loaded_file = scene  # DTX: Control direkt
+	elif scene is Control or scene is Spatial or scene is Node:
+		self._loaded_file = scene
 	else:
 		print("ERROR: Scene loading failed, got: ", scene)
 		return
@@ -222,6 +226,9 @@ func auto_frame_camera(model_root):
 		trackball.make_current()
 	if freelook != null:
 		freelook.clear_current(false)
+
+func on_export_lta_changed(file_menu_model):
+	self._world_builder.export_to_lta = file_menu_model.export_to_lta_on_load
 
 func _exit_tree():
 	if loading_thread.is_active():

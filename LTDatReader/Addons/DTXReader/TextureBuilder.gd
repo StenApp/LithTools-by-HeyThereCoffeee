@@ -1,6 +1,7 @@
 extends Node
 
 var last_flags = 0
+var _dtx_script = preload("res://Addons/DTXReader/Models/DTX.gd")
 
 func build(source_file, options):
 	var file = File.new()
@@ -12,10 +13,7 @@ func build(source_file, options):
 	
 	if file.open(actual_file, File.READ) != OK:
 		return null
-		
-	var path = self.get_script().get_path().get_base_dir() + "/Models/DTX.gd"
-	var dtx_file = load(path)
-	var model = dtx_file.DTX.new()
+	var model = _dtx_script.DTX.new()
 	var response = model.read(file)
 	file.close()
 	

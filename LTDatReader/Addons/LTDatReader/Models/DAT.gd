@@ -143,10 +143,9 @@ class DAT:
 		# Render data doesn't exist in it's own section
 		# And object data comes before world models!
 		if (!is_lithtech_1() && !is_lithtech_jupiter()) && self.render_data_pos != f.get_len():
-			f.seek(self.render_data_pos)
-			
-			self.lightmap_data = WorldLightMaps.new()
-			self.lightmap_data.read(self, f)
+			# LT2: skip lightmap data entirely - not needed for viewer
+			# WorldLightMaps for m16s01 has 18477 frames which takes minutes in GDScript
+			pass # f.seek(render_data_pos) + lightmap_data.read() skipped
 			
 		if is_lithtech_jupiter():
 			f.seek(self.render_data_pos)
@@ -197,6 +196,23 @@ class DAT:
 			if !is_lithtech_jupiter():
 				# Byte array?
 				var unk_dummy = f.get_buffer(32)
+			
+			# Peek at world name to skip special models before full parse
+			var peek_pos = f.get_position()
+			var peek_flags = f.get_32()
+			var peek_treedepth = f.get_32()
+			var peek_name_len = f.get_16()
+			var peek_name = f.get_buffer(peek_name_len).get_string_from_ascii()
+			f.seek(peek_pos)  # rewind
+			
+			if peek_name == "VisBSP":
+				var world_bsp = WorldBSP.new()
+				world_bsp.world_name = peek_name
+				world_bsp.section_count = 0
+				f.seek(next_world_model_pos)
+				world_models.append(world_bsp)
+				self.world_models.append(world_bsp)
+				continue
 			
 			var world_bsp = WorldBSP.new()
 			world_bsp.read(self, f)
@@ -635,43 +651,7 @@ class DAT:
 			# End For
 			
 			# Process Lightmaps
-			if dat.is_lithtech_2():
-				#return
-				var world_model_index = dat.current_world_model_index
-				
-				if !(world_model_index in dat.lightmap_data.data[0].sorted_data):
-					dat.current_poly_index += 1
-					return
-				
-				var lightmap_data_list = dat.lightmap_data.data[0].sorted_data[world_model_index]
-				var lightmap_data = null
-
-				if self.lightmap_width + self.lightmap_height == 0:
-					dat.current_poly_index += 1
-					return
-					
-				for data in lightmap_data_list:
-					if data.poly == dat.current_poly_index:
-						lightmap_data = data
-						break
-						
-				if lightmap_data == null:
-					dat.current_poly_index += 1
-					return
-				
-				var image = Image.new()
-				
-				var lm_width = self.lightmap_width
-				var lm_height = self.lightmap_height
-				var colour_data = lightmap_data.data
-
-				image.create_from_data(lm_width, lm_height, false, Image.FORMAT_RGB8, colour_data)
-				
-				self.lightmap_texture = image
-				
-				image.save_png("nolf_lm.png")
-			# End If
-				
+			# LT2 lightmap lookup disabled - not needed for viewer
 			dat.current_poly_index += 1
 			
 		# End Func
@@ -785,7 +765,6 @@ class DAT:
 		var records = []
 		
 		func read(dat: DAT, f: File):
-			
 			self.unk_int_1 = f.get_32()
 			self.unk_int_2 = f.get_32()
 			self.unk_int_3 = f.get_32()
@@ -795,10 +774,13 @@ class DAT:
 			self.unk_vector_1 = dat.read_vector3(f)
 			self.unk_vector_2 = dat.read_vector3(f)
 			
+			# Skip PBlock records - not needed for rendering, saves RAM
+			# Each PBlockRecord = 2 shorts header + 6*size bytes content
 			for _i in range(self.size):
-				var record = WorldPBlockRecord.new()
-				record.read(dat, f)
-				self.records.append(record)
+				var rec_size = f.get_16()
+				f.get_16()  # unk_short
+				if rec_size > 0:
+					f.get_buffer(6 * rec_size)
 			# End For
 			
 		# End Func
@@ -917,10 +899,10 @@ class DAT:
 				self.verts.append(vert)
 			# End For
 
+			# Skip leaves - not needed for rendering
 			for _i in range(self.leaf_count):
-				var leaf = WorldLeaf.new()
-				leaf.read(dat, f)
-				self.leafs.append(leaf)
+				var _leaf = WorldLeaf.new()
+				_leaf.read(dat, f)
 			# End For
 			
 			for _i in range(self.plane_count):
@@ -956,16 +938,18 @@ class DAT:
 				self.polies.append(poly)
 			# End For
 			
-			for _i in range(self.node_count):
-				var node = WorldNode.new()
-				node.read(dat, f, self.node_count)
-				self.nodes.append(node)
+			# Skip BSP nodes - not needed for rendering
+			# LT2: 4+2+4+4 = 14 bytes per node
+			if dat.is_lithtech_1():
+				f.get_buffer(self.node_count * (4 + 4 + 2 + 4 + 4 + 16))  # LT1 has extra quat
+			else:
+				f.get_buffer(self.node_count * 14)
 			# End For
 			
+			# Skip user portals - not needed for rendering or LTA export
 			for _i in range(self.user_portal_count):
-				var portal = WorldUserPortal.new()
-				portal.read(dat, f)
-				self.user_portals.append(portal)
+				var _portal = WorldUserPortal.new()
+				_portal.read(dat, f)
 			# End For
 			
 			if !dat.is_lithtech_talon():
@@ -1118,7 +1102,7 @@ class DAT:
 			if type > 0:
 				var data = Array(f.get_buffer(self.size))
 			else:
-				self.decompress_data(f)
+				self.data = Array(f.get_buffer(self.size))
 			
 			var hello = true
 				
@@ -1586,21 +1570,18 @@ class DAT:
 				
 				self.sky_portal_count = f.get_32()
 				for i in range(self.sky_portal_count):
-					var sky_portal = RenderSkyPortal.new()
-					sky_portal.read(dat, f)
-					self.sky_portals.append(sky_portal)
+					var _sky_portal = RenderSkyPortal.new()
+					_sky_portal.read(dat, f)
 					
 				self.occulder_count = f.get_32()
 				for i in range(self.occulder_count):
-					var occulder = RenderOcculder.new()
-					occulder.read(dat, f)
-					self.occulders.append(occulder)
+					var _occulder = RenderOcculder.new()
+					_occulder.read(dat, f)
 				
 				self.light_group_count = f.get_32()
 				for i in range(self.light_group_count):
-					var light_group = RenderLightGroup.new()
-					light_group.read(dat, f)
-					self.light_groups.append(light_group)
+					var _light_group = RenderLightGroup.new()
+					_light_group.read(dat, f)
 				
 				self.child_flags = f.get_8()
 				self.child_indexes.append(f.get_32())
