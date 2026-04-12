@@ -1269,7 +1269,7 @@ class DAT:
 			elif self.code == PROP_LONG_INT:
 				return [ 'longint', self.name, self.value ]
 			elif self.code == PROP_ROTATION:
-				return [ 'rotation', self.name, '___eulerangles', self.value.get_euler() ]
+				return [ 'rotation', self.name, '___eulerangles', self.value.normalized().get_euler() ]
 			# End If
 		# End Func
 	# End Class

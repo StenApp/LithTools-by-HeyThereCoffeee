@@ -736,9 +736,8 @@ class LTB_PS2:
 			#print("0x%X: After Vertices (%d)" % [f.get_position(), self.poly_count])
 
 			for _i in range(self.leaf_count):
-				var leaf = WorldLeaf.new()
-				leaf.read(ltb, f)
-				self.leafs.append(leaf)
+				var _leaf = WorldLeaf.new()
+				_leaf.read(ltb, f)
 			# End For
 			#print("0x%X: After Leafs (%d)" % [f.get_position(), self.leaf_count])
 			var debug_ftell = f.get_position()
@@ -781,17 +780,14 @@ class LTB_PS2:
 			#print("0x%X: After Polygons (%d)" % [f.get_position(), self.poly_count])
 			debug_ftell = f.get_position()
 			
-			for _i in range(self.node_count):
-				var node = WorldNode.new()
-				node.read(ltb, f, self.node_count)
-				self.nodes.append(node)
+			# PS2 Node = 16 bytes (int PolyIndex + int LeafIndex + int[2] NodeIndexes)
+			f.get_buffer(self.node_count * 16)
 			# End For
 			#print("0x%X: After Nodes (%d)" % [f.get_position(), self.node_count])
 			
 			for _i in range(self.user_portal_count):
-				var portal = WorldUserPortal.new()
-				portal.read(ltb, f)
-				self.user_portals.append(portal)
+				var _portal = WorldUserPortal.new()
+				_portal.read(ltb, f)
 			# End For
 			#print("0x%X: After UserPortals (%d)" % [f.get_position(), self.user_portal_count])
 			

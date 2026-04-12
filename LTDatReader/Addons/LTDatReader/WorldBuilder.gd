@@ -878,16 +878,6 @@ func fill_array_mesh(model, world_models = []):
 		if world_model.world_name in skip_models:
 			print("Skipping " + world_model.world_name)
 			continue
-#
-		
-##		# Filter: Nur X anzeigen
-#		if world_model.world_name != "Terrain0":
-#			print("Skipping " + world_model.world_name)
-#			continue
-		
-#		if world_model.world_name == "VisBSP":
-#			print("Skipping " + world_model.world_name)
-#			continue
 		
 		print("Processing " + world_model.world_name)
 		
@@ -899,7 +889,6 @@ func fill_array_mesh(model, world_models = []):
 		var indices = PoolIntArray()
 		var polies = []
 		
-#		
 
 		# Lightmap setup (keeping existing code)
 		var total_lms = 0
