@@ -143,9 +143,10 @@ class DAT:
 		# Render data doesn't exist in it's own section
 		# And object data comes before world models!
 		if (!is_lithtech_1() && !is_lithtech_jupiter()) && self.render_data_pos != f.get_len():
-			# LT2: skip lightmap data entirely - not needed for viewer
-			# WorldLightMaps for m16s01 has 18477 frames which takes minutes in GDScript
-			pass # f.seek(render_data_pos) + lightmap_data.read() skipped
+			f.seek(self.render_data_pos)
+			
+			# Lightmaps not needed for viewer or LTA export - skip
+			pass
 			
 		if is_lithtech_jupiter():
 			f.seek(self.render_data_pos)
@@ -197,27 +198,14 @@ class DAT:
 				# Byte array?
 				var unk_dummy = f.get_buffer(32)
 			
-			# Peek at world name to skip special models before full parse
-			var peek_pos = f.get_position()
-			var peek_flags = f.get_32()
-			var peek_treedepth = f.get_32()
-			var peek_name_len = f.get_16()
-			var peek_name = f.get_buffer(peek_name_len).get_string_from_ascii()
-			f.seek(peek_pos)  # rewind
-			
-			if peek_name == "VisBSP":
-				var world_bsp = WorldBSP.new()
-				world_bsp.world_name = peek_name
-				world_bsp.section_count = 0
-				f.seek(next_world_model_pos)
-				world_models.append(world_bsp)
-				self.world_models.append(world_bsp)
-				continue
-			
 			var world_bsp = WorldBSP.new()
-			world_bsp.read(self, f)
+			var skip_list = ["VisBSP"]
+			world_bsp.read(self, f, skip_list)
 			
-			if world_bsp.section_count > 0:
+			# next_world_model_pos == 0 means last model - seek to object data
+			if next_world_model_pos == 0:
+				f.seek(self.object_data_pos)
+			elif world_bsp.section_count > 0 or world_bsp.world_name in skip_list:
 				f.seek(next_world_model_pos)
 			
 			world_models.append(world_bsp)
@@ -650,8 +638,8 @@ class DAT:
 				disk_verts.append(disk_vert)
 			# End For
 			
-			# Process Lightmaps
-			# LT2 lightmap lookup disabled - not needed for viewer
+			# Lightmaps not used in viewer or LTA - skipped
+				
 			dat.current_poly_index += 1
 			
 		# End Func
@@ -720,14 +708,10 @@ class DAT:
 		var dims = Vector3()
 		
 		func read(dat: DAT, f: File):
+			# BT: LTString + int Side0 + short Side1 + Vector3 Center + Vector3 Dims
 			self.name = dat.read_string(f)
-			self.unk_int_1 = f.get_32()
-			
-			if !dat.is_lithtech_1():
-				self.unk_int_2 = f.get_32()
-			# End If
-			
-			self.unk_short = f.get_16()
+			self.unk_int_1 = f.get_32()   # Side0
+			self.unk_short = f.get_16()   # Side1
 			
 			self.center = dat.read_vector3(f)
 			self.dims = dat.read_vector3(f)
@@ -823,7 +807,7 @@ class DAT:
 		var block_table = null
 		var root_node = null
 		
-		func read(dat : DAT, f : File):
+		func read(dat : DAT, f : File, skip_names = []):
 			var debug_ftell = f.get_position()
 			
 			self.world_info_flags = f.get_32()
@@ -834,6 +818,9 @@ class DAT:
 			
 			self.world_name = dat.read_string(f)
 			print("World Name: ",self.world_name)
+			
+			if self.world_name in skip_names:
+				return  # skip reading, caller will seek via NextWorldItem
 			
 			if dat.is_lithtech_1():
 				var next_position = f.get_32()
@@ -947,10 +934,12 @@ class DAT:
 			# End For
 			
 			# Skip user portals - not needed for rendering or LTA export
+			print("Portals: ", self.user_portal_count, " pos: 0x%X" % f.get_position())
 			for _i in range(self.user_portal_count):
 				var _portal = WorldUserPortal.new()
 				_portal.read(dat, f)
 			# End For
+			print("After portals pos: 0x%X" % f.get_position())
 			
 			if !dat.is_lithtech_talon():
 				for _i in range(self.point_count):
@@ -1102,7 +1091,7 @@ class DAT:
 			if type > 0:
 				var data = Array(f.get_buffer(self.size))
 			else:
-				self.data = Array(f.get_buffer(self.size))
+				self.decompress_data(f)
 			
 			var hello = true
 				
@@ -1369,7 +1358,6 @@ class DAT:
 
 				var image = Image.new()
 				image.create_from_data(self.lightmap_width, self.lightmap_height, false, Image.FORMAT_RGB8, lm_data)
-				image.save_png("./lm_data.png")
 				self.lightmap_texture = ImageTexture.new()
 				self.lightmap_texture.create_from_image(image)
 			

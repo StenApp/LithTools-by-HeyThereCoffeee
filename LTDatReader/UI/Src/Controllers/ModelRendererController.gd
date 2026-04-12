@@ -34,7 +34,7 @@ func _ready():
 	
 	loading_mutex = Mutex.new()
 	# Sync export_to_lta toggle from FileMenuButton to WorldBuilder
-	var file_menu = get_node_or_null("/root/Root/UI/FileMenu")
+	var file_menu = get_node_or_null("/root/Root/UI/Top Panel Container/FileMenu")
 	if file_menu != null and file_menu.model != null:
 		file_menu.model.connect("on_options_changed", self, "on_export_lta_changed", [file_menu.model])
 	loading_thread = Thread.new()
