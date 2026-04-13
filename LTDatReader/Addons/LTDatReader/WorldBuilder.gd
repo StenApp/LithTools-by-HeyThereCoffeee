@@ -723,22 +723,6 @@ func fill_array_mesh(model, world_models = []):
 			
 			texture_index = surface.texture_index
 
-			#debug
-			# if poly_index == 0:
-				# print("\n=== POLY 0 DEBUG (GDScript) ===")
-				# print("World: ", world_model.world_name)
-				# print("Surface Index: ", poly.surface_index)
-				# print("DiskVert Count: ", len(poly.disk_verts))
-				# for i in range(len(poly.disk_verts)):
-					# var dv = poly.disk_verts[i]
-					# var idx = dv.vertex_index
-					# if idx >= 0 and idx < len(world_model.points):
-						# var point = world_model.points[idx]
-						# print("  DiskVert[", i, "]: Index=", idx, " --> Point=", point)
-					# else:
-						# print("  DiskVert[", i, "]: Index=", idx, " --> OUT OF BOUNDS!")
-				# print("===============================\n")
-
 			var texture_name = ""
 				
 			if model.PLATFORM == "PS2":
@@ -746,14 +730,14 @@ func fill_array_mesh(model, world_models = []):
 					texture_name = model.texture_list[texture_index].to_lower()
 				else:
 					push_error("Ungültiger PS2 Texturindex: %d" % texture_index)
-					texture_name = "nothing.dtx"
+					texture_name = ""
 			else:
 				# DAT/PC: Verwende die ursprüngliche Methode
 				if texture_index >= 0 and texture_index < world_model.texture_names.size():
 					texture_name = world_model.texture_names[texture_index].name.to_lower()
 				else:
 					push_error("Ungültiger DAT Texturindex: %d" % texture_index)
-					texture_name = "nothing.dtx"	
+					texture_name = ""	
 			
 			#print("World '", world_model.world_name, "' - Polygon ", poly_index, " verwendet Textur: ", texture_name, " (Index: ", texture_index, ")")
 			
@@ -816,7 +800,6 @@ func fill_array_mesh(model, world_models = []):
 						# poly.disk_verts[2].unknown_float_1, poly.disk_verts[2].unknown_float_2
 					# ])
 				
-				
 			else:
 				# PC/DAT: OPQ immer in Surface (LT1/LT2) oder Poly (andere)
 				if model.PLATFORM == "PC" and (model.is_lithtech_1() or model.is_lithtech_2()):
@@ -828,7 +811,7 @@ func fill_array_mesh(model, world_models = []):
 					P = poly.uv2
 					Q = poly.uv3
 				calculation_method = "pc_simple"
-
+				
 			# Process each vertex
 			for disk_vert_index in range(len(poly.disk_verts)):
 				var disk_vert = poly.disk_verts[disk_vert_index]
