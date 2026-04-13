@@ -12,7 +12,7 @@ var export_to_lta_on_load: bool = false
 
 var options = [
 	[0, "Open"],
-	[2, ""],   # placeholder – label set dynamically
+	[2, ""],   # placeholder - label set dynamically
 ]
 
 var options_tex = [

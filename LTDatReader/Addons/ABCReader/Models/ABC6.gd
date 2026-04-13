@@ -221,13 +221,13 @@ class ABC:
 			# -----------------------------------------
 			# For some reason LOD list contains the main lod too!
 			#for i in range(abc.lod_count + 1):
-			var lod = abc.LOD.new()
+			var lod = abc.LTLod.new()
 			lod.read(abc, f, main_face_list, face_count, main_vert_count)
 			lods.append(lod)
 			# End For
 	# End Piece
 		
-	class LOD:
+	class LTLod:
 		var face_count = 0
 		var vertex_count = 0
 		

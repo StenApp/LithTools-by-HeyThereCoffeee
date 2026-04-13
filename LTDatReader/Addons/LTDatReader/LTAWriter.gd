@@ -510,7 +510,7 @@ class LTAWriter:
 				if texture_index >= 0 and texture_index < world_model.texture_names.size():
 					texture_name = world_model.texture_names[texture_index].name
 				else:
-					push_error("Ungültiger Texturindex: %d (WorldModel '%s', %d Texturen)" % [
+					push_error("Ungueltiger Texturindex: %d (WorldModel '%s', %d Texturen)" % [
 						texture_index, world_model.world_name, world_model.texture_names.size()
 					])
 					
@@ -643,41 +643,7 @@ class LTAWriter:
 		var dtx_reader = preload("res://Addons/DTXReader/TextureBuilder.gd").new()
 		
 		var txt_path = path + "_missing_tex.txt"
-#		file = File.new()
-#		file.open(txt_path, File.WRITE)
-#		var nolf_pc_path = "D:\\Games\\NOLF\\NOLF2\\"
-#		var nolf_ps2_path = "D:\\GameDev\\ps2rezdecoder\\ps2rezdecoder\\out\\"
-#
-#		var missing_textures = {}
-#		# Create a list of all the missing textures
-#		for world_model in model.world_models:
-#			for texture in world_model.texture_names:
-#				var texture_name = texture.name
-#
-#				#if file.file_exists(nolf_pc_path + texture_name):
-#					continue
-#				# End If
-#
-#				missing_textures[texture_name] = true
-#			# End For
-#		# End For
-#
-#		var dir = Directory.new()
-#
-#		for texture_name in missing_textures.keys():
-#			#file.store_string(texture_name + "\n")
-#			#var tex = dtx_reader.build(nolf_ps2_path + texture_name, [])
-#			#var save_path = ".\\Textures\\" + texture_name
-#			dir.make_dir_recursive(save_path.get_base_dir())
-#
-#			var png_name = texture_name.replacen(".dtx", ".png")
-#
-#			#tex.get_data().save_png(".\\Textures\\" + png_name)
-#		# End For
-#
-#		file.close()
-		
-		#print("Finished writing missing textures!")
+
 		print("Finished!")
 		
 		return OK

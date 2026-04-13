@@ -79,7 +79,7 @@ class LTB_PS2:
 		self.world_info = WorldInfo.new()
 		self.world_info.read(self, f)
 		
-		print("Props: " , self.world_info.properties)
+		print("WorldInfo: " , self.world_info.properties)
 		print("Position: ",f.get_position())
 		
 		self.world_tree = WorldTree.new()
@@ -109,10 +109,6 @@ class LTB_PS2:
 		print("=== TEXTURE LOADING DEBUG ===")
 		print("File says texture_count: ", texture_count)
 		print("File says texture_size: ", texture_size)		
-		
-		# # Read in all the textures used in this level
-		# for _i in range(texture_count):
-			# self.texture_list.append(self.read_string(f))
 
 		# Read in all the textures used in this level
 		for _i in range(texture_count):
@@ -409,53 +405,30 @@ class LTB_PS2:
 		class DiskVert:
 			var vertex_index = 0
 			var dummy = []
-			var unknown_float_1 = 0.0  # Diese Zeile hinzufügen
-			var unknown_float_2 = 0.0  # Diese Zeile hinzufügen
+			var unknown_float_1 = 0.0
+			var unknown_float_2 = 0.0
 			
 			func read(ltb: LTB_PS2, f : File, is_packed = false):
 				if is_packed == true:
 					self.vertex_index = f.get_32()
-					self.unknown_float_1 = 0.0  # Für packed vertices setzen
+					self.unknown_float_1 = 0.0
 					self.unknown_float_2 = 0.0
 					return
 				
 				self.vertex_index = f.get_16()	
 				self.dummy = Array(f.get_buffer(2))
 				
-				self.unknown_float_1 = f.get_float()  # self. hinzufügen
-				self.unknown_float_2 = f.get_float()  # self. hinzufügen
-				
-#				var unk = f.get_float()
-#				var hack = f.get_32()
-#
-#				if hack < 60000 or hack == 4294967295: # -1
-#					f.seek(f.get_position() - 4)
+				self.unknown_float_1 = f.get_float()
+				self.unknown_float_2 = f.get_float()
 
-#							
+						
 				var unknown3 = f.get_32()
 
-				# Hack folgt NUR wenn Unknown3 im Bereich 1.0 - 1.2 Milliarden liegt
+				# Hack follows ONLY if Unknown3 is in range between 1.0 - 1.2 milliards
 				if unknown3 >= 1000000000 and unknown3 < 1200000000:
 					var hack = f.get_32()
-				# Sonst (2133073948, 2139127936, oder andere) → kein Hack
+				# else (2133073948, 2139127936, or others) --> no Hack
 				
-#				# Skip the next two variables...
-#				f.seek(f.get_position() + 8)
-#
-#				# Small hack for later...
-#				var hack_check = f.get_32()
-#
-#				# Go back three variables
-#				f.seek(f.get_position() - 12)
-#
-#				# I cannot figure out why there's sometimes an extra float...
-#				# So we just skip ahead, grab the value, and come back.
-#				# If the value is over 60,000 then we can safely assume 
-#				# it has the extra float
-#				if hack_check < 60000:
-#					var unknown_float_3 = f.get_float()
-#
-#				var unknown_ending = f.get_32()
 			# End Func
 		# End Class
 		
@@ -692,9 +665,7 @@ class LTB_PS2:
 		
 		func read(ltb : LTB_PS2, f : File):
 			self.world_name = ltb.read_string(f)
-			print("World Name: ",self.world_name)
-			
-			#print("0x%X: After WorldName" % f.get_position())
+			print("Reading World Model Name: ",self.world_name)
 			
 			self.world_info_flags = f.get_32()
 			var unknown_value = f.get_32()
@@ -723,8 +694,6 @@ class LTB_PS2:
 			
 			var unknown_4 = f.get_16()
 			
-			#print("0x%X: After Counts" % f.get_position())
-			
 			# Not sure why it's poly count..
 			for _i in range(self.poly_count):
 				var vert = f.get_8()
@@ -733,13 +702,11 @@ class LTB_PS2:
 				#vert += f.get_8()
 				self.verts.append(vert)
 			# End For
-			#print("0x%X: After Vertices (%d)" % [f.get_position(), self.poly_count])
 
 			for _i in range(self.leaf_count):
 				var _leaf = WorldLeaf.new()
 				_leaf.read(ltb, f)
 			# End For
-			#print("0x%X: After Leafs (%d)" % [f.get_position(), self.leaf_count])
 			var debug_ftell = f.get_position()
 			
 			for _i in range(self.plane_count):
@@ -747,7 +714,7 @@ class LTB_PS2:
 				plane.read(ltb, f)
 				self.planes.append(plane)
 			# End For
-			#print("0x%X: After Planes (%d)" % [f.get_position(), self.plane_count])
+
 			for _i in range(self.surface_count):
 				var surface = WorldSurface.new()
 				surface.read(ltb, f)
@@ -759,7 +726,6 @@ class LTB_PS2:
 			if debug_ftell == 3633:
 				var hi = true
 				hi = false
-			#print("0x%X: After Surfaces (%d)" % [f.get_position(), self.surface_count])
 			
 			for i in range(self.poly_count):
 				var poly = WorldPoly.new()
@@ -777,26 +743,21 @@ class LTB_PS2:
 				
 				self.polies.append(poly)
 			# End For
-			#print("0x%X: After Polygons (%d)" % [f.get_position(), self.poly_count])
+			
 			debug_ftell = f.get_position()
 			
 			# PS2 Node = 16 bytes (int PolyIndex + int LeafIndex + int[2] NodeIndexes)
 			f.get_buffer(self.node_count * 16)
 			# End For
-			#print("0x%X: After Nodes (%d)" % [f.get_position(), self.node_count])
 			
 			for _i in range(self.user_portal_count):
 				var _portal = WorldUserPortal.new()
 				_portal.read(ltb, f)
 			# End For
-			#print("0x%X: After UserPortals (%d)" % [f.get_position(), self.user_portal_count])
-			
-			#print("0x%X: BEFORE Points (%d) - EXPECTED: ???" % [f.get_position(), self.point_count])
 			
 			if ltb.version == LTB_PS2_VERSION_NOLF:
 				
 				#var pos_before = f.get_position()
-				#print("Position BEFORE Points: 0x%X" % pos_before)
 				
 				for _i in range(self.point_count):
 					self.points.append(ltb.read_vector3(f))

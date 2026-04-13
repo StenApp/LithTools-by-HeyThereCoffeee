@@ -46,7 +46,7 @@ func import(source_file, save_path, options, platform_variants, gen_files):
 	
 	print("LTB Detection - Type: ", file_type, " Version: ", version)
 	
-	# Level-LTB? → An LTDatReader weiterleiten
+	# Level-LTB? --> An LTDatReader weiterleiten
 	if version == 66:  # PS2 Level Format
 		print("Level-LTB detected - delegating to LTDatReader")
 		# Lade den LTDatReader WorldBuilder
@@ -58,7 +58,7 @@ func import(source_file, save_path, options, platform_variants, gen_files):
 		ResourceSaver.save(filename, scene)
 		return OK
 	
-	# Model-LTB? → Unser Plugin
+	# Model-LTB? --> Unser Plugin
 	elif version == 2:  # NOLF1 Model Format
 		print("Model-LTB detected - using LTB Model Plugin")
 		var scene = self._model_builder.build(source_file, options)

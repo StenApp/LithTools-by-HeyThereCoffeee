@@ -1,6 +1,6 @@
 extends Node
 
-# ABC → Godot Koordinatensystem-Korrektur
+# ABC --> Godot Koordinatensystem-Korrektur
 var mirror_abc_for_godot = true  # Für Links-Rechts Spiegelung
 
 # Just the skeleton I can access anywhere, mostly for debug purposes
@@ -110,7 +110,7 @@ func build(source_file, options):
 		mesh_instance.name = piece.name
 		mesh_instance.mesh = mesh
 		
-		# ABC → Godot Koordinatensystem-Korrektur (DIESE ZEILE HINZUFÜGEN)
+		# ABC --> Godot Koordinatensystem-Korrektur (DIESE ZEILE HINZUFÜGEN)
 		if mirror_abc_for_godot:
 			mesh_instance.scale = Vector3(-1.0, 1.0, 1.0)
 		
@@ -183,11 +183,11 @@ func get_dtx_path(abc_path: String, material_index: int) -> String:
 	# var base_dir = abc_path.get_base_dir()
 	# var file_name = abc_path.get_file().replace(".abc", ".dtx")
 	
-	# # models_pv → skins_pv
+	# # models_pv --> skins_pv
 	# if base_dir.ends_with("models_pv"):
 		# return base_dir.replace("models_pv", "skins_pv") + "/" + file_name
 	
-	# # models → skins  
+	# # models --> skins  
 	# elif base_dir.ends_with("models"):
 		# return base_dir.replace("models", "skins") + "/" + file_name
 	

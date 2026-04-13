@@ -873,13 +873,12 @@ func fill_array_mesh(model, world_models = []):
 	
 	for world_model_index in range(len(world_models)):
 		var world_model = world_models[world_model_index]
-		print("DEBUG wm loop: ", world_model.world_name)
 		
 		if world_model.world_name in skip_models:
 			print("Skipping " + world_model.world_name)
 			continue
 		
-		print("Processing " + world_model.world_name)
+		print("Processing World Model " + world_model.world_name)
 		
 		var verts = []
 		var uvs = []
@@ -927,9 +926,9 @@ func fill_array_mesh(model, world_models = []):
 					# var idx = dv.vertex_index
 					# if idx >= 0 and idx < len(world_model.points):
 						# var point = world_model.points[idx]
-						# print("  DiskVert[", i, "]: Index=", idx, " → Point=", point)
+						# print("  DiskVert[", i, "]: Index=", idx, " --> Point=", point)
 					# else:
-						# print("  DiskVert[", i, "]: Index=", idx, " → OUT OF BOUNDS!")
+						# print("  DiskVert[", i, "]: Index=", idx, " --> OUT OF BOUNDS!")
 				# print("===============================\n")
 
 			var texture_name = ""
@@ -1044,7 +1043,7 @@ func fill_array_mesh(model, world_models = []):
 						poly.uv2 = last_uv_result.P
 						poly.uv3 = last_uv_result.Q
 					"ps2_direct":
-						# FIX: UV→OPQ-Konvertierung mit korrigierter Funktion
+						# FIX: UV-->OPQ-Konvertierung mit korrigierter Funktion
 						var opq_result = convert_uv_to_opq_lithtech_original(poly, world_model, model, tex_width, tex_height)
 						poly.uv1 = opq_result.O
 						poly.uv2 = opq_result.P

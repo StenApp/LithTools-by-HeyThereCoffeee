@@ -77,7 +77,7 @@ func build(source_file, options):
 		mesh_instance.name = piece.name
 		mesh_instance.mesh = mesh
 		
-		# PS2 → Godot Koordinatensystem-Korrektur
+		# PS2 --> Godot Koordinatensystem-Korrektur
 		if mirror_for_godot:
 			mesh_instance.scale = Vector3(-1.0, 1.0, 1.0)
 		

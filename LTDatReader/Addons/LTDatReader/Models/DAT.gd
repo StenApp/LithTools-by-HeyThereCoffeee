@@ -129,7 +129,7 @@ class DAT:
 		self.world_info = WorldInfo.new()
 		self.world_info.read(self, f)
 		
-		print("Props: " , self.world_info.properties)
+		print("WorldInfo: " , self.world_info.properties)
 		print("Position: ",f.get_position())
 		
 		self.world_tree = WorldTree.new()
@@ -817,7 +817,7 @@ class DAT:
 			# End If
 			
 			self.world_name = dat.read_string(f)
-			print("World Name: ",self.world_name)
+			print("Reading World Model Name: ",self.world_name)
 			
 			if self.world_name in skip_names:
 				return  # skip reading, caller will seek via NextWorldItem
@@ -934,12 +934,10 @@ class DAT:
 			# End For
 			
 			# Skip user portals - not needed for rendering or LTA export
-			print("Portals: ", self.user_portal_count, " pos: 0x%X" % f.get_position())
 			for _i in range(self.user_portal_count):
 				var _portal = WorldUserPortal.new()
 				_portal.read(dat, f)
 			# End For
-			print("After portals pos: 0x%X" % f.get_position())
 			
 			if !dat.is_lithtech_talon():
 				for _i in range(self.point_count):

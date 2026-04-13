@@ -37,7 +37,7 @@ func _init():
 func import(source_file, save_path, options, platform_variants, gen_files):
 	# Smart Detection: DAT vs LTB
 	if source_file.get_extension().to_lower() == "ltb":
-		# LTB-Datei → An LTBReader delegieren
+		# LTB-Datei --> An LTBReader delegieren
 		print("LTB file detected - delegating to LTBReader")
 		
 		# Lade den LTBReader Importer
@@ -45,7 +45,7 @@ func import(source_file, save_path, options, platform_variants, gen_files):
 		return ltb_importer.import(source_file, save_path, options, platform_variants, gen_files)
 	
 	else:
-		# DAT-Datei → Normale LTDatReader Verarbeitung
+		# DAT-Datei --> Normale LTDatReader Verarbeitung
 		print("DAT file detected - using LTDatReader")
 		var scene = self._world_builder.build(source_file, options)
 		

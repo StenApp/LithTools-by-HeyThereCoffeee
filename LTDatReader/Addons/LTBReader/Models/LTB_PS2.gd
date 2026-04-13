@@ -181,8 +181,8 @@ func _read_piece(file: File, piece_index: int, hash_magic: int) -> Piece:
 	
 	return piece
 
-func _read_lod(file: File, lod_index: int) -> LOD:
-	var lod = LOD.new()
+func _read_lod(file: File, lod_index: int) -> LTLod:
+	var lod = LTLod.new()
 	
 	# Read mesh type for this LOD
 	var mesh_type = file.get_32()
@@ -669,7 +669,7 @@ class VertexList:
 				# Bestimme die Winding Order - mit optionalem Fix
 				var should_reverse = grouped_faces[i].face_vertex.reversed
 				
-				# Für PS2 → Godot: Winding Order umkehren
+				# Für PS2 --> Godot: Winding Order umkehren
 				if fix_winding:
 					should_reverse = not should_reverse
 				
@@ -716,7 +716,7 @@ class Piece:
 	var lods = []
 	var primary_lod = null  # LOD 0
 
-class LOD:
+class LTLod:
 	var mesh_type = 0
 	var node_binding = 0
 	var vertices = []
