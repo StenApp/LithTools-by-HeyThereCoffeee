@@ -197,7 +197,7 @@ class PieceHeader:
 				print("ERROR: EOF while reading LOD ", i)
 				return false
 			
-			var lod = LOD.new()
+			var lod = MeshLod.new()
 			if not lod.read(ltb, f):
 				print("ERROR: Failed reading LOD ", i)
 				return false
@@ -205,7 +205,7 @@ class PieceHeader:
 		
 		return true
 
-class LOD:
+class MeshLod:
 	var texture_indices = []
 	var mesh_type = 0
 	var vertices = []

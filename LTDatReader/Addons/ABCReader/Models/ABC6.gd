@@ -3,7 +3,7 @@ class ABC:
 
 	const version_constant = "MonolithExport Model File v6"
 	
-	var mirror_abc_for_godot = true  # Für Links-Rechts Spiegelung
+	var mirror_abc_for_godot = true  # Fuer Links-Rechts Spiegelung
 
 	# Header
 	var version = 0
@@ -221,13 +221,13 @@ class ABC:
 			# -----------------------------------------
 			# For some reason LOD list contains the main lod too!
 			#for i in range(abc.lod_count + 1):
-			var lod = abc.LTLod.new()
+			var lod = abc.MeshLod.new()
 			lod.read(abc, f, main_face_list, face_count, main_vert_count)
 			lods.append(lod)
 			# End For
 	# End Piece
 		
-	class LTLod:
+	class MeshLod:
 		var face_count = 0
 		var vertex_count = 0
 		

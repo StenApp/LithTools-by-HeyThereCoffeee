@@ -304,204 +304,12 @@ func clear_texture_cache():
 	cached_textures.clear()
 
 
-# TODO: Also need to handle shifting? https://github.com/Shfty/libmap/blob/6e4160924cf5373e67e8f35422b196e6e0eaa52c/src/c/geo_generator.c
-# Enhanced OPQ to UV mapping algorithm for LithTech world geometry
-# This handles all complex cases: simple boxes, angled wedges, pyramids, and large structures
-
-# Main UV mapping function with full algorithm support
-func opq_to_uv_enhanced(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, polygon_center: Vector3, plane_normal: Vector3, plane_distance: float, surface_index: int, texture_name: String, tex_width = 64.0, tex_height = 64.0):
-	"""
-	Enhanced OPQ to UV mapping that handles:
-	- Simple axis-aligned geometry (boxes, rooms)
-	- Angled surfaces (wedges, slopes) 
-	- Complex multi-surface geometry (pyramids)
-	- Large architectural structures
-	- Multiple surface coordinate systems
-	"""
-	
-	# Step 1: Calculate UV origin for this polygon
-	var uv_origin = calculate_polygon_uv_origin(o, p, q, polygon_center, plane_normal, plane_distance)
-	
-	# Step 2: Transform surface vectors to polygon's local plane if needed
-	var transformed_vectors = transform_surface_vectors_to_plane(p, q, plane_normal)
-	var local_p = transformed_vectors[0]
-	var local_q = transformed_vectors[1]
-	
-	# Step 3: Calculate UV coordinates from the origin
-	var point_from_origin = vertex - uv_origin
-	var u = point_from_origin.dot(local_p) / tex_width
-	var v = point_from_origin.dot(local_q) / tex_height
-	
-	# Debug output for complex cases
-	if should_debug_texture(texture_name):
-		debug_uv_calculation(vertex, o, p, q, polygon_center, plane_normal, uv_origin, local_p, local_q, u, v, texture_name)
-	
-	#return Vector2(u, v)
-	return {
-	"uv": Vector2(u, v),
-	"O": uv_origin,
-	"P": local_p,
-	"Q": local_q
-}
-
-func calculate_polygon_uv_origin(surface_uv1: Vector3, surface_uv2: Vector3, surface_uv3: Vector3, polygon_center: Vector3, plane_normal: Vector3, plane_distance: float):
-	"""
-	Calculate the UV (0,0) origin for this specific polygon.
-	This is the key insight from the algorithm analysis.
-	"""
-	
-	# For most cases, we need to find where UV coordinates would be minimal
-	# This often requires projecting the surface reference point onto the polygon's plane
-	
-	# Method 1: Use surface UV1 as base reference (works for most cases)
-	var base_reference = surface_uv1
-	
-	# Method 2: For angled planes, project reference onto the plane
-	if not is_axis_aligned_plane(plane_normal):
-		# Project surface reference onto this polygon's plane
-		var point_to_plane_distance = plane_normal.dot(surface_uv1) + plane_distance
-		base_reference = surface_uv1 - plane_normal * point_to_plane_distance
-	
-	# Method 3: Adjust by polygon center offset if needed
-	# This handles cases where surface coordinates are defined relative to a different polygon
-	var center_offset = polygon_center - base_reference
-	
-	# The UV origin is where UV coordinates would be (0,0) for this polygon
-	# We calculate this by finding the minimum UV values across the polygon's vertices
-	# Since we don't have all vertices here, we use the polygon center as approximation
-	var uv_origin = base_reference
-	
-	return uv_origin
-
-func transform_surface_vectors_to_plane(surface_p: Vector3, surface_q: Vector3, plane_normal: Vector3):
-	"""
-	Transform surface vectors to work correctly with this polygon's plane orientation.
-	Handles angled surfaces and maintains proper texture orientation.
-	"""
-
-	var transformed_p = surface_p
-	var transformed_q = surface_q
-
-	# Check if vectors are perpendicular to plane normal (they should be)
-	var p_dot_normal = abs(surface_p.dot(plane_normal))
-	var q_dot_normal = abs(surface_q.dot(plane_normal))
-	var p_dot_q = abs(surface_p.normalized().dot(surface_q.normalized()))
-
-	# Fix vectors that aren't in the plane
-	if p_dot_normal > 0.1:
-		# P vector is not in the plane - project it
-		transformed_p = (surface_p - plane_normal * surface_p.dot(plane_normal)).normalized() * surface_p.length()
-
-		# Alternative: Generate new P vector perpendicular to normal and Q
-		if surface_q.cross(plane_normal).length() > 0.1:
-			transformed_p = surface_q.cross(plane_normal).normalized() * surface_p.length()
-
-	if q_dot_normal > 0.1:
-		# Q vector is not in the plane - project it  
-		transformed_q = (surface_q - plane_normal * surface_q.dot(plane_normal)).normalized() * surface_q.length()
-
-		# Alternative: Generate new Q vector perpendicular to normal and P
-		if plane_normal.cross(transformed_p).length() > 0.1:
-			transformed_q = plane_normal.cross(transformed_p).normalized() * surface_q.length()
-
-	# Ensure P and Q are perpendicular to each other
-	if p_dot_q > 0.1:
-		# Re-orthogonalize Q relative to P, keeping it in the surface plane
-		transformed_q = plane_normal.cross(transformed_p).normalized() * surface_q.length()
-
-	return [transformed_p, transformed_q]
-
-
-func is_axis_aligned_plane(plane_normal: Vector3) -> bool:
-	"""
-	Check if this plane is axis-aligned (normal along X, Y, or Z axis)
-	"""
-	var threshold = 0.1
-	return (abs(plane_normal.x) > 0.9 and abs(plane_normal.y) < threshold and abs(plane_normal.z) < threshold) or \
-		   (abs(plane_normal.y) > 0.9 and abs(plane_normal.x) < threshold and abs(plane_normal.z) < threshold) or \
-		   (abs(plane_normal.z) > 0.9 and abs(plane_normal.x) < threshold and abs(plane_normal.y) < threshold)
-
-func should_debug_texture(texture_name: String) -> bool:
-	# """
-	# Enable debug output for specific problematic textures
-	# """
-	# var debug_textures = ["wd0296", "trobj0008", "st1003", "st1004"]
-	# for debug_tex in debug_textures:
-		# if texture_name.find(debug_tex) >= 0:
-			# return true
-	return false
-	#return true
-
-func debug_uv_calculation(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, polygon_center: Vector3, plane_normal: Vector3, uv_origin: Vector3, local_p: Vector3, local_q: Vector3, u: float, v: float, texture_name: String):
-	# """
-	# Debug output for complex UV calculations
-	# """
-	# print("=== ENHANCED UV MAPPING DEBUG ===")
-	# print("Texture: ", texture_name)
-	# print("Vertex: ", vertex)
-	# print("Original O: ", o, " P: ", p, " Q: ", q)
-	# print("Polygon Center: ", polygon_center)
-	# print("Plane Normal: ", plane_normal)
-	# print("Calculated UV Origin: ", uv_origin)
-	# print("Transformed P: ", local_p, " Q: ", local_q)
-	# print("Final UV: (", u, ", ", v, ")")
-	
-	# Diagnostic checks
-	var p_perp_normal = abs(local_p.dot(plane_normal))
-	var q_perp_normal = abs(local_q.dot(plane_normal))
-	var p_perp_q = abs(local_p.normalized().dot(local_q.normalized()))
-	#print("P⊥Normal: ", p_perp_normal, " Q⊥Normal: ", q_perp_normal, " P⊥Q: ", p_perp_q)
-	
-	#if p_perp_normal < 0.1 and q_perp_normal < 0.1 and p_perp_q < 0.1:
-		#print("*** VECTORS ARE MATHEMATICALLY CORRECT ***")
-	#else:
-		
-		#print("*** VECTORS WERE CORRECTED ***")
-	#print("===================================")
-
-# Alternative simpler function for basic cases
-func opq_to_uv_simple(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, polygon_center: Vector3, plane_normal: Vector3, texture_name: String, tex_width = 64.0, tex_height = 64.0):
-	"""
-	Simplified version for basic geometry where surface vectors are already correct
-	"""
-	var point = vertex - o
-	var u = point.dot(p) / tex_width
-	var v = point.dot(q) / tex_height
-	return Vector2(u, v)
-
-# Function to choose which algorithm to use based on geometry complexity
-func opq_to_uv_adaptive(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, polygon_center: Vector3, plane_normal: Vector3, plane_distance: float, surface_index: int, surface_count: int, texture_name: String, tex_width = 64.0, tex_height = 64.0):
-	"""
-	Adaptive UV mapping that chooses the right algorithm based on geometry complexity
-	"""
-	
-	# Simple case: Single surface with axis-aligned geometry
-	# if surface_count == 1 and is_axis_aligned_plane(plane_normal):
-		# return opq_to_uv_simple(vertex, o, p, q, polygon_center, plane_normal, texture_name, tex_width, tex_height)
-	if surface_count == 1 and is_axis_aligned_plane(plane_normal):
-		var uv = opq_to_uv_simple(vertex, o, p, q, polygon_center, plane_normal, texture_name, tex_width, tex_height)
-		return {
-			"uv": uv,
-			"O": o,
-			"P": p,
-			"Q": q
-		}
-	
-	# Complex case: Multiple surfaces or angled geometry
-	else:
-		return opq_to_uv_enhanced(vertex, o, p, q, polygon_center, plane_normal, plane_distance, surface_index, texture_name, tex_width, tex_height)
-
-# Für PC/Standard - einfache orthogonale OPQ
+# OPQ to UV - standard LithTech formula, used for both PC and PS2 packed surfaces
 func opq_to_uv_pc(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, tex_width = 128.0, tex_height = 128.0):
 	var point = vertex - o
 	var u = point.dot(p) / tex_width
 	var v = point.dot(q) / tex_height
 	return Vector2(u, v)
-
-
-# Für PS2 - komplexe Transformation (deine bestehende enhanced Version)
-func opq_to_uv_ps2(vertex: Vector3, o: Vector3, p: Vector3, q: Vector3, polygon_center: Vector3, plane_normal: Vector3, plane_distance: float, texture_name: String, tex_width = 64.0, tex_height = 64.0):
-	return opq_to_uv_enhanced(vertex, o, p, q, polygon_center, plane_normal, plane_distance, 0, texture_name, tex_width, tex_height)	
 
 func get_vert_uv( vert : Vector3, poly_u : Vector3, poly_v : Vector3, lm_width, lm_height ):
 	#return Vector2( vert.dot(poly_u), vert.dot(poly_v) )
@@ -986,15 +794,31 @@ func fill_array_mesh(model, world_models = []):
 				P = poly.uv2
 				Q = poly.uv3
 				
+				# Packed (Bit 2): OPQ in Surface, direkte UVs in DiskVerts fehlen
+				# Nicht packed: direkte UVs in DiskVerts, OPQ wird für LTAWriter zurückgerechnet
 				var is_packed = (surface.flags & (1 << 2)) != 0
-				if is_packed:
-					calculation_method = "ps2_opq"
-					#print("POLYGON %d USING OPQ - Surface flags: 0x%X" % [poly_index, surface.flags])
-				else:
-					calculation_method = "ps2_direct"
-					#print("POLYGON %d USING DIRECT UVs - Surface flags: 0x%X" % [poly_index, surface.flags])
+				calculation_method = "ps2_opq" if is_packed else "ps2_direct"
+				
+				# UV offset debug
+				# if not is_packed:
+					# print("POLY_%d [%s] u2=%d u3=%d unk5=%.4f unk6=%.4f" % [
+						# poly_index, texture_name,
+						# poly.unknown2, poly.unknown3,
+						# poly.unknown5, poly.unknown6
+					# ])
+				
+				# OPQ debug
+				# if not is_packed and poly.disk_verts.size() >= 3:
+					# print("POLY_%d [%s] uv0=(%.4f,%.4f) uv1=(%.4f,%.4f) uv2=(%.4f,%.4f)" % [
+						# poly_index, texture_name,
+						# poly.disk_verts[0].unknown_float_1, poly.disk_verts[0].unknown_float_2,
+						# poly.disk_verts[1].unknown_float_1, poly.disk_verts[1].unknown_float_2,
+						# poly.disk_verts[2].unknown_float_1, poly.disk_verts[2].unknown_float_2
+					# ])
+				
+				
 			else:
-				# PC/DAT: Hole OPQ je nach LithTech-Version
+				# PC/DAT: OPQ immer in Surface (LT1/LT2) oder Poly (andere)
 				if model.PLATFORM == "PC" and (model.is_lithtech_1() or model.is_lithtech_2()):
 					O = surface.uv1
 					P = surface.uv2
@@ -1003,11 +827,8 @@ func fill_array_mesh(model, world_models = []):
 					O = poly.uv1
 					P = poly.uv2
 					Q = poly.uv3
-				calculation_method = "pc_simple"  # FIX: Für alle PC-Pfade setzen
+				calculation_method = "pc_simple"
 
-			var polygon_center = Vector3(poly.center.x, poly.center.y, poly.center.z)
-			var last_uv_result = {}  # FIX: Variable definieren
-			
 			# Process each vertex
 			for disk_vert_index in range(len(poly.disk_verts)):
 				var disk_vert = poly.disk_verts[disk_vert_index]
@@ -1024,31 +845,22 @@ func fill_array_mesh(model, world_models = []):
 				# UV-Berechnung basierend auf Polygon-Methode
 				match calculation_method:
 					"ps2_opq":
-						var uv_result = opq_to_uv_adaptive(vert, O, P, Q, polygon_center, plane.normal, plane.distance, poly.surface_index, world_model.surface_count, texture_name, tex_width, tex_height)
-						uvs.append(uv_result.uv)
-						last_uv_result = uv_result  # FIX: Sammeln für OPQ-Speicherung
+						# Packed: OPQ aus Surface, direkte Formel reicht (nur invisible.dtx)
+						uvs.append(opq_to_uv_pc(vert, O, P, Q, tex_width, tex_height))
 					"ps2_direct":
-						var uv = Vector2(disk_vert.unknown_float_1, disk_vert.unknown_float_2)
-						uvs.append(uv)
+						uvs.append(Vector2(disk_vert.unknown_float_1, disk_vert.unknown_float_2))
 					"pc_simple":
-						var uv = opq_to_uv_pc(vert, O, P, Q, tex_width, tex_height)
-						uvs.append(uv)
+						uvs.append(opq_to_uv_pc(vert, O, P, Q, tex_width, tex_height))
 
-			# Nach der Vertex-Schleife: OPQ-Speicherung
-			if model.PLATFORM == "PS2":
-				match calculation_method:
-					"ps2_opq":
-						# FIX: Verwende gesammelte korrigierte OPQ-Werte
-						poly.uv1 = last_uv_result.O
-						poly.uv2 = last_uv_result.P
-						poly.uv3 = last_uv_result.Q
-					"ps2_direct":
-						# FIX: UV-->OPQ-Konvertierung mit korrigierter Funktion
-						var opq_result = convert_uv_to_opq_lithtech_original(poly, world_model, model, tex_width, tex_height)
-						poly.uv1 = opq_result.O
-						poly.uv2 = opq_result.P
-						poly.uv3 = opq_result.Q
-			# PC: Keine Aktualisierung nötig	
+			# Nach der Vertex-Schleife: OPQ-Speicherung für LTAWriter
+			if model.PLATFORM == "PS2" and calculation_method == "ps2_direct":
+				# Direkte UVs → OPQ zurückrechnen
+				var opq_result = convert_uv_to_opq_lithtech_original(poly, world_model, model, tex_width, tex_height)
+				poly.uv1 = opq_result.O
+				poly.uv2 = opq_result.P
+				poly.uv3 = opq_result.Q
+			# ps2_opq: OPQ bereits in poly.uv1/2/3 aus Surface
+			# PC: Keine Aktualisierung nötig
 			
 			# Lightmap UV calculation (keeping existing code unchanged)
 			if lm_image != null and lm_image.get_width() > 0 and lm_image.get_height() > 0:

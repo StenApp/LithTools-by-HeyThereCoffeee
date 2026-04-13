@@ -22,8 +22,8 @@ const VIF_MSCALF = 0x15000000
 const VIF_DIRECT = 0x50
 const VIF_UNPACK = 0x6C
 
-var fix_winding_for_godot = true  # Für inside-out Problem
-var mirror_for_godot = true       # Für links-rechts Problem
+var fix_winding_for_godot = true  # Fuer inside-out Problem
+var mirror_for_godot = true       # Fuer links-rechts Problem
 
 # Main LTB data
 var name = ""
@@ -181,8 +181,8 @@ func _read_piece(file: File, piece_index: int, hash_magic: int) -> Piece:
 	
 	return piece
 
-func _read_lod(file: File, lod_index: int) -> LTLod:
-	var lod = LTLod.new()
+func _read_lod(file: File, lod_index: int) -> MeshLod:
+	var lod = MeshLod.new()
 	
 	# Read mesh type for this LOD
 	var mesh_type = file.get_32()
@@ -360,7 +360,7 @@ func _read_lod(file: File, lod_index: int) -> LTLod:
 	
 	return lod
 
-func _process_skeletal_weights(file: File, lod: LOD, vertex_count: int, node_binding: int, unk_sector_count: int):
+func _process_skeletal_weights(file: File, lod: MeshLod, vertex_count: int, node_binding: int, unk_sector_count: int):
 	# Process unknown sector (simplified)
 	var unk_sector_start = file.get_position()
 	
@@ -669,7 +669,7 @@ class VertexList:
 				# Bestimme die Winding Order - mit optionalem Fix
 				var should_reverse = grouped_faces[i].face_vertex.reversed
 				
-				# Für PS2 --> Godot: Winding Order umkehren
+				# Fuer PS2 --> Godot: Winding Order umkehren
 				if fix_winding:
 					should_reverse = not should_reverse
 				
@@ -716,7 +716,7 @@ class Piece:
 	var lods = []
 	var primary_lod = null  # LOD 0
 
-class LTLod:
+class MeshLod:
 	var mesh_type = 0
 	var node_binding = 0
 	var vertices = []

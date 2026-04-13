@@ -1,7 +1,7 @@
 class ABC:
 	var name = ""
 	
-	var mirror_abc_for_godot = true  # Für Links-Rechts Spiegelung
+	var mirror_abc_for_godot = true  # Fuer Links-Rechts Spiegelung
 	
 	# Header
 	var version = 0
@@ -204,13 +204,13 @@ class ABC:
 			self.name = abc.read_string(f)
 			
 			for i in range(abc.lod_count):
-				var lod = abc.LOD.new()
+				var lod = abc.MeshLod.new()
 				lod.read(abc, f)
 				lods.append(lod)
 			# End For
 	# End Piece
 		
-	class LOD:
+	class MeshLod:
 		var face_count = 0
 		var vertex_count = 0
 		
