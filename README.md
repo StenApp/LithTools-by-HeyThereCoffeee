@@ -8,6 +8,8 @@ Decompiled version of LithTools by HeyThereCoffeee
   
   -viewing of Levels dat and ltb format (NOLF1 PS2, NOLF1 PC, NOLF2)
 
+  -skipping lightmap reading stuff since it's not used by Godot, which makes it very fast in loading and saving LTA
+
 Set up folder containing textures (tex folder) in settings.cfg in LTDatReader folder.
 
 Setting export_to_lta_on_load =true exports the level to an LTA level file (NOLF1 format), now via Menu.
