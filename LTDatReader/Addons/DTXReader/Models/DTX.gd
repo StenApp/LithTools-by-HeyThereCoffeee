@@ -144,15 +144,16 @@ class DTX:
 		var image = null
 		var bpp = self.get_bpp_ident()
 		
-		# Version check must come before everything else!!
-		if [DTX_VERSION_LT1, DTX_VERSION_LT15].has(self.version):
-			image = self.read_8bit_palette(f)
-		elif bpp == BPP_8P:
+		# LT1/LT1.5: nur BPP_8P (palettiert) wird mit dem alten Format gelesen
+		# LT1 kann aber auch andere Formate haben (DXT etc.) - bpp entscheidet
+		if [DTX_VERSION_LT1, DTX_VERSION_LT15].has(self.version) and bpp == BPP_8P:
 			image = self.read_8bit_palette(f)
 		elif [BPP_S3TC_DXT1, BPP_S3TC_DXT3, BPP_S3TC_DXT5].has(bpp):
 			image = self.read_compressed(f)
 		elif bpp == BPP_32:
 			image = self.read_32bit_texture(f)
+		elif bpp == BPP_8P:
+			image = self.read_8bit_palette(f)
 		elif bpp == BPP_32P:
 			image = self.read_32bit_palette(f)
 		elif bpp == BPP_8:
@@ -291,16 +292,12 @@ class DTX:
 		var _palette_header_1 = f.get_32()
 		var _palette_header_2 = f.get_32()
 
-		# Handle the palette - DTX format is BRGA, not RGBA
+		# Palette: Format ist ARGB laut pixelformat.h RPaletteColor { uchar a,r,g,b }
 		for _i in range(256):
-		
-			var a = f.get_8()  # First Alpha
-			var r = f.get_8()  # Then Red  
-			var g = f.get_8()  # Then Green
-			var b = f.get_8()  # The Blue
-			
-
-			# Store in RGBA order for Godot
+			var a = f.get_8()
+			var r = f.get_8()
+			var g = f.get_8()
+			var b = f.get_8()
 			palette.append( Quat(r, g, b, a) )
 		# End For
 
@@ -364,9 +361,9 @@ class DTX:
 		var rgba = PoolByteArray()
 		var i = 0
 		while i < data.size():
-			rgba.append(data[i])      # R
-			rgba.append(data[i + 1])  # G 
-			rgba.append(data[i + 2])  # B
+			rgba.append(data[i+2])  # R (BGR->RGB)
+			rgba.append(data[i+1])  # G
+			rgba.append(data[i])    # B
 			rgba.append(255)
 			i += 3
 		image.create_from_data(self.width, self.height, false, Image.FORMAT_RGBA8, rgba)
