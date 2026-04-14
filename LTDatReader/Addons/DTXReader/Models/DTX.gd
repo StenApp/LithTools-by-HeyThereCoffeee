@@ -293,10 +293,12 @@ class DTX:
 
 		# Handle the palette - DTX format is BRGA, not RGBA
 		for _i in range(256):
-			var b = f.get_8()  # Blue comes first
+		
+			var a = f.get_8()  # First Alpha
 			var r = f.get_8()  # Then Red  
 			var g = f.get_8()  # Then Green
-			var a = f.get_8()  # Then Alpha
+			var b = f.get_8()  # The Blue
+			
 
 			# Store in RGBA order for Godot
 			palette.append( Quat(r, g, b, a) )
@@ -362,9 +364,9 @@ class DTX:
 		var rgba = PoolByteArray()
 		var i = 0
 		while i < data.size():
-			rgba.append(data[i+2])  # R (BGR->RGB)
-			rgba.append(data[i+1])  # G
-			rgba.append(data[i])    # B
+			rgba.append(data[i])      # R
+			rgba.append(data[i + 1])  # G 
+			rgba.append(data[i + 2])  # B
 			rgba.append(255)
 			i += 3
 		image.create_from_data(self.width, self.height, false, Image.FORMAT_RGBA8, rgba)
