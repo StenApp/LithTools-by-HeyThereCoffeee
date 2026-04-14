@@ -6,13 +6,14 @@ var _dtx_script = preload("res://Addons/DTXReader/Models/DTX.gd")
 func build(source_file, options):
 	var file = File.new()
 	
-	# Versuche erst Original, dann lowercase
-	var actual_file = source_file
-	if not file.file_exists(source_file) and file.file_exists(source_file.to_lower()):
-		actual_file = source_file.to_lower()
-	
+	# Versuche zuerst uppercase (.DTX) um Windows-Treiber-Warnungen zu vermeiden,
+	# dann original source_file als Fallback.
+	var upper_ext = source_file.get_base_dir() + "/" + source_file.get_file().get_basename() + ".DTX"
+	var actual_file = upper_ext
 	if file.open(actual_file, File.READ) != OK:
-		return null
+		actual_file = source_file
+		if file.open(actual_file, File.READ) != OK:
+			return null
 	var model = _dtx_script.DTX.new()
 	var response = model.read(file)
 	file.close()

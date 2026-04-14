@@ -411,24 +411,23 @@ class ABC:
 		var bounds_min = Vector3()
 		var bounds_max = Vector3()
 		var animation_length = 0 #?
+		# vertex_deformations[node_index] = Array of Vector3, one per keyframe*vert
 		var vertex_deformations = []
-		var scale = Vector3()
-		var transform = Vector3()
+		# Bug 3 fix: scale/transform sind pro Node, nicht global
+		var node_scales = []
+		var node_transforms = []
 		
 		func read(abc : ABC, f : File):
-			var pos = f.get_position()
 			self.name = abc.read_string(f)
 			
 			self.animation_length = f.get_32()
 			self.bounds_min = abc.read_vector3(f)
 			self.bounds_max = abc.read_vector3(f)
-			
-			# Not sure if this is correct!
 			self.extents = self.bounds_max - self.bounds_min
 			
 			self.keyframe_count = f.get_32()
 			
-			for i in range (self.keyframe_count):
+			for i in range(self.keyframe_count):
 				var lt_keyframe = LTKeyframe.new()
 				lt_keyframe.read(abc, f)
 				self.keyframes.append(lt_keyframe)
@@ -442,31 +441,27 @@ class ABC:
 					keyframes_per_node.append(lt_transform)
 				# End For
 				self.node_keyframes.append(keyframes_per_node)
-				pos = f.get_position()
 				
 				var mesh_deformation_vertex_count = abc.nodes[i].mesh_deformation_vertex_count
 				
-				# If we have some vertex animations, handle it
+				# Bug 3 fix: scale/transform per Node lesen und speichern
+				var raw_deforms = []
 				for j in range(self.keyframe_count * mesh_deformation_vertex_count):
-					var location = Vector3( f.get_8(), f.get_8(), f.get_8() )
-					self.vertex_deformations.append(location)
+					raw_deforms.append(Vector3(f.get_8(), f.get_8(), f.get_8()))
 				# End For
 
-				self.scale = abc.read_vector3(f)
-				self.transform = abc.read_vector3(f)
+				var node_scale = abc.read_vector3(f)
+				var node_transform = abc.read_vector3(f)
+				self.node_scales.append(node_scale)
+				self.node_transforms.append(node_transform)
 				
-				# Process the vertex animation
-				for j in range(len(self.vertex_deformations)):
-					var deformation = self.vertex_deformations[j]
-					
-					# To get the proper coordinates we must multiply our 0-255 vertex deformation by the scale value, 
-					#then add the transform
-					deformation = (deformation * scale) + transform
-					
-					self.vertex_deformations[j] = deformation
+				# Deform-Koordinaten expandieren: byte_val * scale + transform
+				var expanded = []
+				for deform in raw_deforms:
+					expanded.append(deform * node_scale + node_transform)
+				# End For
+				self.vertex_deformations.append(expanded)
 			# End For
-			pos = f.get_position()
-			var t = true
 		# End Func
 	# End LTAnim
 	
