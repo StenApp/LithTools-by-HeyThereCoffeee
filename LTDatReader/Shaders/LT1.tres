@@ -36,7 +36,7 @@ output_port_for_preview = 0
 input_name = "color"
 
 [sub_resource type="VisualShaderNodeVectorOp" id=10]
-default_input_values = [ 0, Vector3( 0, 0, 0 ), 1, Vector3( 1, 1, 1 ) ]
+default_input_values = [ 0, Vector3( 0, 0, 0 ), 1, Vector3( 0.5, 0.5, 0.5 ) ]
 operator = 2
 
 [sub_resource type="VisualShaderNodeVectorOp" id=11]
@@ -44,7 +44,7 @@ default_input_values = [ 0, Vector3( 0, 0, 0 ), 1, Vector3( 1, 1, 1 ) ]
 
 [resource]
 code = "shader_type spatial;
-render_mode specular_schlick_ggx, vertex_lighting;
+render_mode specular_schlick_ggx, async_visible, vertex_lighting;
 
 uniform sampler2D main_texture;
 uniform float use_lightmap;
@@ -86,7 +86,7 @@ void fragment() {
 	}
 
 // VectorOp:8
-	vec3 n_in8p1 = vec3(1.00000, 1.00000, 1.00000);
+	vec3 n_in8p1 = vec3(0.50000, 0.50000, 0.50000);
 	vec3 n_out8p0 = n_out5p0 * n_in8p1;
 
 // Input:7
@@ -121,7 +121,6 @@ void fragment() {
 
 // Output:0
 	ALBEDO = n_out6p0;
-	//ALBEDO = vec3(UV2.x, UV2.y, 0.0);
 
 }
 
@@ -130,7 +129,7 @@ void light() {
 
 }
 "
-graph_offset = Vector2( -1082, 31.75 )
+graph_offset = Vector2( -873.474, -30.3265 )
 flags/vertex_lighting = true
 nodes/fragment/0/position = Vector2( 340, 120 )
 nodes/fragment/2/node = SubResource( 4 )

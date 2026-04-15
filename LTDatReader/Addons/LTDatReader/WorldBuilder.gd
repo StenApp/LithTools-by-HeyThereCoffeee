@@ -140,7 +140,7 @@ func build(source_file, options):
 		if use_lightmaps:
 			lm_image_texture = ImageTexture.new()
 			lm_image_texture.create_from_image(lm_texture_array)
-			lm_image_texture.set_flags(ImageTexture.FLAGS_DEFAULT + ImageTexture.FLAG_ANISOTROPIC_FILTER + ImageTexture.FLAG_CONVERT_TO_LINEAR)
+			lm_image_texture.set_flags(ImageTexture.FLAGS_DEFAULT + ImageTexture.FLAG_ANISOTROPIC_FILTER)
 			
 		
 		var i = 0;

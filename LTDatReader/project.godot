@@ -72,4 +72,4 @@ zoom_in={
 
 quality/filters/anisotropic_filter_level=16
 quality/filters/msaa=2
-environment/default_environment="res://default_env.tres"
+environment/default_environment="res://Shaders/default_env.tres"
