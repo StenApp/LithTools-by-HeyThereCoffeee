@@ -11,7 +11,7 @@ var debug_file = null
 var last_build_type = "level"  # "level", "model_ps2", "model_pc"
 
 const LIGHTMAP_ATLAS_SIZE = 2048.0#4096.0#2048.0
-
+const ENABLE_LT2_LIGHTMAPS = false
 
 func chunk(array, by): 
 	var chunks = []
@@ -87,7 +87,8 @@ func build(source_file, options):
 		model = dat_file.DAT.new()	
 		
 	# Batched reading
-	var response = model.read(file, true)
+	#var response = model.read(file, true)
+	var response = model.read(file, true, not ENABLE_LT2_LIGHTMAPS)
 	if response.code == model.IMPORT_RETURN.ERROR:
 		print("IMPORT ERROR: " + str(response.message))
 		return FAILED
@@ -127,7 +128,7 @@ func build(source_file, options):
 			use_lightmaps = true
 		
 		# LT2 (NOLF1/AVP2): Lightmaps aktivieren wenn dieses WM Lightmap-Daten hat
-		if model.version == 66:
+		if model.version == 66 and ENABLE_LT2_LIGHTMAPS:
 			for poly in world_model.polies:
 				if poly.lightmap_texture != null:
 					use_lightmaps = true
@@ -151,7 +152,8 @@ func build(source_file, options):
 			var tex = get_texture(tex_name)
 			
 			var mat = ShaderMaterial.new()
-			mat.shader = load("res://Addons/LTDatReader/Shaders/LT1.tres") as VisualShader
+			mat.shader = load("res://Addons/LTDatReader/Shaders/LT1.shader")
+			#mat.shader = load("res://Addons/LTDatReader/Shaders/LT1.tres") as VisualShader
 			
 			mat.set_shader_param("main_texture", tex)
 			
@@ -205,7 +207,8 @@ func build(source_file, options):
 				tex = get_texture(tex_name)
 
 			var mat = ShaderMaterial.new()
-			mat.shader = load("res://Addons/LTDatReader/Shaders/LT1.tres") as VisualShader
+			mat.shader = load("res://Addons/LTDatReader/Shaders/LT1.shader")
+			#mat.shader = load("res://Addons/LTDatReader/Shaders/LT1.tres") as VisualShader
 			
 			mat.set_shader_param("main_texture", tex)
 			#mat.set_shader_param("lm_texture", lm_image_texture)
@@ -251,7 +254,8 @@ func build(source_file, options):
 				var tex = get_texture(tex_name)
 				
 				var mat = ShaderMaterial.new()
-				mat.shader = load("res://Addons/LTDatReader/Shaders/LT1.tres") as VisualShader
+				mat.shader = load("res://Addons/LTDatReader/Shaders/LT1.shader")
+				#mat.shader = load("res://Addons/LTDatReader/Shaders/LT1.tres") as VisualShader
 				
 				mat.set_shader_param("main_texture", tex)
 				mat.set_shader_param("lm_texture", lm_image_texture)
@@ -457,8 +461,8 @@ func build_array_mesh(textured_meshes):
 			var mesh_colours = mesh[3]
 			var mesh_uvs2 = mesh[5]
 			
-			if len(mesh_uvs2) > 0:
-				print("UV2 check: verts=", len(mesh_verts), " uvs2=", len(mesh_uvs2), " first=", mesh_uvs2[0])
+			# if len(mesh_uvs2) > 0:
+				# print("UV2 check: verts=", len(mesh_verts), " uvs2=", len(mesh_uvs2), " first=", mesh_uvs2[0])
 			
 			# Mesh is formatted in triangle fan segments per "EditPoly"
 			st.add_triangle_fan( PoolVector3Array(mesh_verts), PoolVector2Array(mesh_uvs), PoolColorArray(mesh_colours), PoolVector2Array(mesh_uvs2), PoolVector3Array(mesh_normals) )

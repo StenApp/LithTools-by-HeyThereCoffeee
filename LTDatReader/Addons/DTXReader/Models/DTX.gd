@@ -209,7 +209,7 @@ class DTX:
 		var image = Image.new()
 		var raw_data = f.get_buffer(self.width * self.height * 4)
 		
-		print("read_32bit_texture: raw_data.size()=", raw_data.size(), " expected=", self.width * self.height * 4)
+		#print("read_32bit_texture: raw_data.size()=", raw_data.size(), " expected=", self.width * self.height * 4)
 		
 		# Try swapping just red and blue channels (BGRA -> RGBA)
 		var rgba_data = PoolByteArray()

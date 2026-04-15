@@ -102,7 +102,8 @@ class DAT:
 			DAT_VERSION_JUPITER
 			].has(self.version)
 	
-	func read(f : File, dont_import_world_models = false):
+	#func read(f : File, dont_import_world_models = false):
+	func read(f : File, dont_import_world_models = false, skip_lightmaps = false):
 		
 		self.version = f.get_32()
 		
@@ -142,12 +143,21 @@ class DAT:
 		# Lithtech 1.0 --
 		# Render data doesn't exist in it's own section
 		# And object data comes before world models!
+		# if (!is_lithtech_1() && !is_lithtech_jupiter()) && self.render_data_pos != f.get_len():
+			# f.seek(self.render_data_pos)
+			
+			# self.lightmap_data = WorldLightMaps.new()
+			# self.lightmap_data.read(self, f)
+		
 		if (!is_lithtech_1() && !is_lithtech_jupiter()) && self.render_data_pos != f.get_len():
 			f.seek(self.render_data_pos)
 			
-			self.lightmap_data = WorldLightMaps.new()
-			self.lightmap_data.read(self, f)
-			
+			if not skip_lightmaps:
+				self.lightmap_data = WorldLightMaps.new()
+				self.lightmap_data.read(self, f)
+
+
+		
 		if is_lithtech_jupiter():
 			f.seek(self.render_data_pos)
 			
