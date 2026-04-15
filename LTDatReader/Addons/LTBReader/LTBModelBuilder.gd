@@ -83,6 +83,7 @@ func build(source_file, options):
 		
 		# Create material with DTX texture
 		var material = SpatialMaterial.new()
+		material.flags_unshaded = true
 		
 		# Texture-Path für jedes Piece einzeln berechnen
 		var texture_path = get_dtx_path(source_file, piece.material_index)
@@ -227,9 +228,8 @@ func fill_array_mesh(model, skeleton):
 					this_vert_bones.append(-1)
 					this_vert_weights.append(0.0)
 			
-			# Note: Bone weights are commented out for now
-			# st.add_bones(this_vert_bones)
-			# st.add_weights(this_vert_weights)
+			st.add_bones(this_vert_bones)
+			st.add_weights(this_vert_weights)
 			
 			st.add_vertex(verts[index])
 			i += 1

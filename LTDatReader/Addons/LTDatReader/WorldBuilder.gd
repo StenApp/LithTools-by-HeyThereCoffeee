@@ -125,6 +125,13 @@ func build(source_file, options):
 		# Quick hack for public release
 		if model.version == 55 || model.version == 56 || model.version == 127:
 			use_lightmaps = true
+		
+		# LT2 (NOLF1/AVP2): Lightmaps aktivieren wenn dieses WM Lightmap-Daten hat
+		if model.version == 66:
+			for poly in world_model.polies:
+				if poly.lightmap_texture != null:
+					use_lightmaps = true
+					break
 
 		# Loop through our pieces, and add them to mesh instances
 		# lm_texture_array.save_png("lm_null.png")
@@ -449,6 +456,9 @@ func build_array_mesh(textured_meshes):
 			var mesh_verts = mesh[2]
 			var mesh_colours = mesh[3]
 			var mesh_uvs2 = mesh[5]
+			
+			if len(mesh_uvs2) > 0:
+				print("UV2 check: verts=", len(mesh_verts), " uvs2=", len(mesh_uvs2), " first=", mesh_uvs2[0])
 			
 			# Mesh is formatted in triangle fan segments per "EditPoly"
 			st.add_triangle_fan( PoolVector3Array(mesh_verts), PoolVector2Array(mesh_uvs), PoolColorArray(mesh_colours), PoolVector2Array(mesh_uvs2), PoolVector3Array(mesh_normals) )
@@ -845,67 +855,65 @@ func fill_array_mesh(model, world_models = []):
 			# ps2_opq: OPQ bereits in poly.uv1/2/3 aus Surface
 			# PC: Keine Aktualisierung nötig
 			
-			# Lightmap UV calculation (keeping existing code unchanged)
+			# Lightmap UV calculation (LithTech: SetupLMPlaneVectors + GetExtents)
 			if lm_image != null and lm_image.get_width() > 0 and lm_image.get_height() > 0:
-				var lm_width = lm_image.get_width()
-				var lm_height = lm_image.get_height()
+				var lm_width = float(lm_image.get_width())
+				var lm_height = float(lm_image.get_height())
+				var vert_offset = depth_uv / Vector2(LIGHTMAP_ATLAS_SIZE, LIGHTMAP_ATLAS_SIZE)
 
-				var poly_u = plane.normal.cross(Vector3.UP)
-				if poly_u.dot(poly_u) < 0.001:
-					poly_u = Vector3.RIGHT
-				else:
-					poly_u = poly_u.normalized()
-				var poly_v = plane.normal.cross(poly_u).normalized()
+				# LMPlanes: [P, Q, Normal] - 6 principal planes
+				var lm_planes = [
+					[Vector3(1,0,0), Vector3(0,0,-1), Vector3(0,1,0)],
+					[Vector3(1,0,0), Vector3(0,0,1),  Vector3(0,-1,0)],
+					[Vector3(1,0,0), Vector3(0,1,0),  Vector3(0,0,1)],
+					[Vector3(1,0,0), Vector3(0,-1,0), Vector3(0,0,-1)],
+					[Vector3(0,0,1), Vector3(0,-1,0), Vector3(1,0,0)],
+					[Vector3(0,0,-1),Vector3(0,-1,0), Vector3(-1,0,0)]
+				]
 
-				var top_left = Vector2(999.0, 999.0)
-				var bottom_right = Vector2(-999.0, -999.0)
+				# SelectLMPlaneVector: best plane by dot with poly normal
+				var poly_normal = plane.normal
+				var best_plane = 0
+				var best_dot = -2.0
+				for pi in range(6):
+					var d = poly_normal.dot(lm_planes[pi][2])
+					if d > best_dot:
+						best_dot = d
+						best_plane = pi
 
+				# SetupLMPlaneVectors
+				var lm_P = poly_normal.cross(lm_planes[best_plane][1]).normalized()
+				var lm_Q = lm_P.cross(poly_normal).normalized()
+
+				# GetExtents: find min projection of all verts onto lm_P and lm_Q
+				var min_p = INF
+				var min_q = INF
 				for disk_vert_index in range(len(poly.disk_verts)):
-					var disk_vert = poly.disk_verts[disk_vert_index]
-					var vert = world_model.points[disk_vert.vertex_index]
-					var vert_uv = get_vert_uv(vert, poly_u, poly_v, LIGHTMAP_ATLAS_SIZE, LIGHTMAP_ATLAS_SIZE)
-					
-					if vert_uv.x < top_left.x:
-						top_left.x = vert_uv.x
-					if vert_uv.y < top_left.y:
-						top_left.y = vert_uv.y
-					if vert_uv.x > bottom_right.x:
-						bottom_right.x = vert_uv.x
-					if vert_uv.y > bottom_right.y:
-						bottom_right.y = vert_uv.y
+					var vert = world_model.points[poly.disk_verts[disk_vert_index].vertex_index]
+					var dp = vert.dot(lm_P)
+					var dq = vert.dot(lm_Q)
+					if dp < min_p: min_p = dp
+					if dq < min_q: min_q = dq
 
-				top_left += Vector2(-0.0035, -0.0035)
-				bottom_right += Vector2(0.0035, 0.0035)
-				
-				var uv_offset = (Vector2(0,0) - top_left)
-				var uv_scale = (bottom_right - top_left)
-				
+				var lm_grid = model.world_info.light_map_grid_size
+				if lm_grid <= 0.0:
+					lm_grid = 20.0
+
+				# Build UV2 per vertex
 				for disk_vert_index in range(len(poly.disk_verts)):
-					var disk_vert = poly.disk_verts[disk_vert_index]
-					var vert = world_model.points[disk_vert.vertex_index]
+					var vert = world_model.points[poly.disk_verts[disk_vert_index].vertex_index]
+					# Welteinheiten → Pixel → Atlas-UV
+					var u = (vert.dot(lm_P) - min_p) / (lm_width * lm_grid)
+					var v = (vert.dot(lm_Q) - min_q) / (lm_height * lm_grid)
 
-					var vert_uv = get_vert_uv(vert, poly_u, poly_v, LIGHTMAP_ATLAS_SIZE, LIGHTMAP_ATLAS_SIZE)
-					var vert_offset = (depth_uv / Vector2(LIGHTMAP_ATLAS_SIZE, LIGHTMAP_ATLAS_SIZE))
-					
-					vert_uv += uv_offset
-					
-					if uv_scale.x > 0.0:
-						vert_uv.x /= uv_scale.x
-					if uv_scale.y > 0.0:
-						vert_uv.y /= uv_scale.y
-					
 					var new_vert_uv = Vector2(
-						vert_uv.x * (float(lm_width) / LIGHTMAP_ATLAS_SIZE), 
-						vert_uv.y * (float(lm_height) / LIGHTMAP_ATLAS_SIZE)
+						u * (lm_width / LIGHTMAP_ATLAS_SIZE) + vert_offset.x,
+						v * (lm_height / LIGHTMAP_ATLAS_SIZE) + vert_offset.y
 					)
-					
-					new_vert_uv += vert_offset
 
-					if is_nan(new_vert_uv.x):
-						new_vert_uv.x = 0.0
-					if is_nan(new_vert_uv.y):
-						new_vert_uv.y = 0.0
-					
+					if is_nan(new_vert_uv.x): new_vert_uv.x = 0.0
+					if is_nan(new_vert_uv.y): new_vert_uv.y = 0.0
+
 					uvs2.append(new_vert_uv)
 			else:
 				for disk_vert_index in range(len(poly.disk_verts)):

@@ -86,11 +86,13 @@ func build(source_file, options):
 		mesh_instance.mesh = mesh
 		
 		# ABC --> Godot Koordinatensystem-Korrektur
-		if mirror_abc_for_godot:
+		if mirror_abc_for_godot and model.version != 6:
 			mesh_instance.scale = Vector3(-1.0, 1.0, 1.0)
-		
+			
 		# Create material with DTX texture
 		var material = SpatialMaterial.new()
+		material.flags_unshaded = true
+		#material.flags_albedo_tex_force_srgb = true
 		
 		# HIER: Texture-Path für jedes Piece einzeln berechnen
 		var texture_path = get_dtx_path(source_file, piece.material_index)
@@ -100,9 +102,8 @@ func build(source_file, options):
 			var texture = texture_builder.build(texture_path, {})
 			if texture != null:
 				material.albedo_texture = texture
-				print("Texture geladen: ", texture_path)
 			else:
-				print("DTX-Fehler: ", texture_path)
+				print("ERROR: Texture nicht geladen: ", texture_path)
 		else:
 			print("DTX nicht gefunden: ", texture_path)
 		
@@ -275,6 +276,7 @@ func fill_array_mesh(model, skeleton):
 					var vertex_index = vertex.vertex_index
 					
 					uvs.append( Vector2( texcoord.x, texcoord.y ) )
+					
 					indices.append(vertex_index)
 				# End For
 			# End For
@@ -310,8 +312,9 @@ func fill_array_mesh(model, skeleton):
 				this_vert_weights.append(0.0)
 			# End For
 				
-			#st.add_bones(this_vert_bones)
-			#st.add_weights(this_vert_weights)
+			if vert_weight_count[index] > 0:
+				st.add_bones(this_vert_bones)
+				st.add_weights(this_vert_weights)
 			
 			st.add_vertex(verts[index])
 			i += 1

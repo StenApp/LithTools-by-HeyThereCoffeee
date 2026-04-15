@@ -122,7 +122,8 @@ class DTX:
 		
 		if [DTX_VERSION_LT15, DTX_VERSION_LT2].has(self.version):
 			self.command_string = f.get_buffer(DTX_COMMANDSTRING_LENGTH).get_string_from_ascii()
-			
+		
+		#print("position before read_texture_data: ", f.get_position(), " file_len=", f.get_len())
 		self.image = self.read_texture_data(f)
 		
 		if self.image == null:
@@ -138,12 +139,15 @@ class DTX:
 	# m_Extra[2]==0 bedeutet BPP_32 (nicht BPP_8P!).
 	# Hintergrund: SetBPPIdent(BPP_32) schreibt 3, GetBPPIdent() gibt bei 0 als Default BPP_32 zurueck.
 	func get_bpp_ident() -> int:
+		if self.version == DTX_VERSION_LT1 and self.bytes_per_pixel == 0:
+			return BPP_8P
 		return BPP_32 if self.bytes_per_pixel == 0 else self.bytes_per_pixel
 
 	func read_texture_data(f : File):
 		var image = null
 		var bpp = self.get_bpp_ident()
 		
+		#print("read_texture_data: bpp=", bpp, " version=", self.version, " w=", self.width, " h=", self.height, " mipmaps=", self.mipmap_count)
 		# LT1/LT1.5: nur BPP_8P (palettiert) wird mit dem alten Format gelesen
 		# LT1 kann aber auch andere Formate haben (DXT etc.) - bpp entscheidet
 		if [DTX_VERSION_LT1, DTX_VERSION_LT15].has(self.version) and bpp == BPP_8P:
@@ -204,6 +208,8 @@ class DTX:
 	func read_32bit_texture(f : File):
 		var image = Image.new()
 		var raw_data = f.get_buffer(self.width * self.height * 4)
+		
+		print("read_32bit_texture: raw_data.size()=", raw_data.size(), " expected=", self.width * self.height * 4)
 		
 		# Try swapping just red and blue channels (BGRA -> RGBA)
 		var rgba_data = PoolByteArray()
@@ -287,8 +293,8 @@ class DTX:
 		var image = Image.new()
 		var palette = []
 		
-		# Two unknown ints!
-		# Used for the internal get palette function in LT1
+		#print("read_8bit_palette: version=", self.version, " LT1=", DTX_VERSION_LT1, " match=", self.version == DTX_VERSION_LT1)
+		
 		var _palette_header_1 = f.get_32()
 		var _palette_header_2 = f.get_32()
 
@@ -298,7 +304,7 @@ class DTX:
 			var r = f.get_8()
 			var g = f.get_8()
 			var b = f.get_8()
-			palette.append( Quat(r, g, b, a) )
+			palette.append( Quat(r, g, b, 255) )
 		# End For
 
 		var data = f.get_buffer(self.width * self.height * 1)

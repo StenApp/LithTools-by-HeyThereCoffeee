@@ -145,8 +145,8 @@ class DAT:
 		if (!is_lithtech_1() && !is_lithtech_jupiter()) && self.render_data_pos != f.get_len():
 			f.seek(self.render_data_pos)
 			
-			# Lightmaps not needed for viewer or LTA export - skip
-			pass
+			self.lightmap_data = WorldLightMaps.new()
+			self.lightmap_data.read(self, f)
 			
 		if is_lithtech_jupiter():
 			f.seek(self.render_data_pos)
@@ -638,8 +638,40 @@ class DAT:
 				disk_verts.append(disk_vert)
 			# End For
 			
-			# Lightmaps not used in viewer or LTA - skipped
+			# Process Lightmaps (LT2 only)
+			if dat.is_lithtech_2():
+				if dat.lightmap_data == null:
+					dat.current_poly_index += 1
+					return
 				
+				var world_model_index = dat.current_world_model_index
+				
+				if !(world_model_index in dat.lightmap_data.data[0].sorted_data):
+					dat.current_poly_index += 1
+					return
+				
+				var lightmap_data_list = dat.lightmap_data.data[0].sorted_data[world_model_index]
+				var lightmap_data = null
+				
+				if self.lightmap_width + self.lightmap_height == 0:
+					dat.current_poly_index += 1
+					return
+				
+				for data in lightmap_data_list:
+					if data.poly == dat.current_poly_index:
+						lightmap_data = data
+						break
+				# End For
+				
+				if lightmap_data == null:
+					dat.current_poly_index += 1
+					return
+				
+				var image = Image.new()
+				image.create_from_data(self.lightmap_width, self.lightmap_height, false, Image.FORMAT_RGB8, lightmap_data.data)
+				self.lightmap_texture = image
+			# End If
+			
 			dat.current_poly_index += 1
 			
 		# End Func
@@ -1027,10 +1059,8 @@ class DAT:
 		
 		
 		
-		# TODO: Decompress via DecompressLMData
 		func decompress_data(f : File):
 			var current_position = 0
-			var safety_break = 1024 # ?
 			var colour_data = []
 
 			while current_position < self.size:
@@ -1046,28 +1076,11 @@ class DAT:
 					copy_count = 1
 				# End If
 
-				safety_break -= copy_count
-				if safety_break < 0:
-					print("[Decompress Data] LM Data over-read detected!")
-					break
-				# End If
-
 				for _i in range(copy_count):
-
-					# Unpack RGB565
-					var r = (tag >> 10) & 0x001F
-					var g = (tag >> 5) & 0x001F
-					var b = (tag) & 0x001F
-					
-					#r = max(0x1f, r)
-					#g = max(0x1f, g)
-					#b = max(0x1f, b)
-					
-					#r *= 16
-					#g *= 16
-					#b *= 16
-					
-					# 
+					# RGB555
+					var r = ((tag >> 10) & 0x1F) << 3
+					var g = ((tag >> 5)  & 0x1F) << 3
+					var b = ( tag        & 0x1F) << 3
 					colour_data.append( r )
 					colour_data.append( g )
 					colour_data.append( b )
@@ -1075,9 +1088,6 @@ class DAT:
 			# End While
 
 			self.data = colour_data
-			var pos = f.get_position()
-			
-			var hello = true
 		# End Func
 		
 		func read(dat : DAT, f : File, type):
@@ -1087,13 +1097,9 @@ class DAT:
 				self.size = f.get_16()
 				
 			if type > 0:
-				var data = Array(f.get_buffer(self.size))
+				f.seek(f.get_position() + self.size)
 			else:
 				self.decompress_data(f)
-			
-			var hello = true
-				
-			#self.data = Array(f.get_buffer(self.size))
 		# End Func
 	# End Class
 	

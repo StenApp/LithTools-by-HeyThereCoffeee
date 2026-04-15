@@ -121,6 +121,7 @@ void fragment() {
 
 // Output:0
 	ALBEDO = n_out6p0;
+	//ALBEDO = vec3(UV2.x, UV2.y, 0.0);
 
 }
 
