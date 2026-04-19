@@ -73,10 +73,14 @@ func build(source_file, options):
 	for i in range(len(meshes)):
 		var mesh = meshes[i]
 		var piece = model.pieces[i]
+		var primary_lod = piece.primary_lod if piece.primary_lod != null else piece.lods[0]
+		var is_rigid = primary_lod.mesh_type == 4
 		var mesh_instance = MeshInstance.new()
 		mesh_instance.name = piece.name
 		mesh_instance.mesh = mesh
 		
+		mesh_instance.extra_cull_margin = 16.0
+		print("AABB: ", mesh.get_aabb())
 		# PS2 --> Godot Koordinatensystem-Korrektur
 		if mirror_for_godot:
 			mesh_instance.scale = Vector3(-1.0, 1.0, 1.0)
@@ -100,8 +104,15 @@ func build(source_file, options):
 			print("DTX nicht gefunden: ", texture_path)
 		
 		mesh_instance.material_override = material
-		skeleton.add_child(mesh_instance)
-		mesh_instance.owner = root
+		if is_rigid:
+			root.add_child(mesh_instance)
+			mesh_instance.owner = root
+		else:
+			skeleton.add_child(mesh_instance)
+			mesh_instance.owner = root
+		
+		print("Skeleton bone count: ", skeleton.get_bone_count())
+		print("mesh_instance parent: ", mesh_instance.get_parent().name)
 	# End For
 	
 	# Animation time!
@@ -176,6 +187,8 @@ func fill_array_mesh(model, skeleton):
 		else:
 			print("Warning: No LOD data for piece ", piece.name)
 			continue
+			
+		var is_rigid = primary_lod.mesh_type == 4	
 		
 		print("  LOD 0 - Vertices: ", primary_lod.vertices.size(), " Faces: ", primary_lod.faces.size())
 		
@@ -220,17 +233,20 @@ func fill_array_mesh(model, skeleton):
 				# For some reason these MUST be 4 values each!
 				var remainder = 4 - vert_weight_count[index]
 				for filler in range(remainder):
-					this_vert_bones.append(-1)
+					this_vert_bones.append(0)
 					this_vert_weights.append(0.0)
 			else:
 				# Fallback: no bone weights
 				for filler in range(4):
-					this_vert_bones.append(-1)
+					this_vert_bones.append(0)
 					this_vert_weights.append(0.0)
 			
-			st.add_bones(this_vert_bones)
-			st.add_weights(this_vert_weights)
-			
+			if not is_rigid:
+				st.add_bones(this_vert_bones)
+				st.add_weights(this_vert_weights)
+			if i == 0:
+				print("First vertex: ", verts[index], " is_rigid: ", is_rigid)
+
 			st.add_vertex(verts[index])
 			i += 1
 		

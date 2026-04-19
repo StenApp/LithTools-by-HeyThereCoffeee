@@ -172,7 +172,7 @@ func _threaded_load(path):
 		get_node("/root/Root").add_child(self._loaded_file)  # 3D unter Root
 	
 	if file_mode == LoadedFile.FILE_ABC:
-		auto_frame_camera(self._loaded_file)
+		call_deferred("auto_frame_camera", self._loaded_file)
 	else:
 		var freelook = get_node_or_null("/root/Root/FreeLook")
 		if freelook != null:
@@ -214,18 +214,30 @@ func auto_frame_camera(model_root):
 		return
 	var center = aabb.position + aabb.size * 0.5
 	var size = aabb.size.length()
-	var dist = size * 0.8
+	var dist = max(size * 0.8, 5.0)
+	
 	# Move model so AABB center is at origin - trackball rotates around origin
 	model_root.global_transform.origin -= center
 	# Switch to trackball camera for free rotation
 	var trackball = get_node_or_null("/root/Root/Camera")
 	var freelook = get_node_or_null("/root/Root/FreeLook")
-	if trackball != null:
-		trackball.global_transform.origin = Vector3(0.0, 0.0, dist)
-		trackball.look_at(Vector3.ZERO, Vector3.UP)
-		trackball.make_current()
+	
+	print("auto_frame_camera: center=", center, " size=", size, " dist=", dist)
+	print("freelook pos: ", freelook.global_transform.origin if freelook != null else "null")
+	# if trackball != null:
+		# trackball.global_transform.origin = Vector3(0.0, 0.0, dist)
+		# trackball.look_at(Vector3.ZERO, Vector3.UP)
+		# trackball.make_current()
+	# if freelook != null:
+		# freelook.clear_current(false)
+		
 	if freelook != null:
-		freelook.clear_current(false)
+		freelook.global_transform.origin = Vector3(0.0, 0.0, dist)
+		freelook.look_at(Vector3.ZERO, Vector3.UP)
+		freelook.make_current()
+		print("freelook nach set: ", freelook.global_transform.origin)
+	if trackball != null:
+		trackball.clear_current(false)	
 
 func on_export_lta_changed(file_menu_model):
 	self._world_builder.export_to_lta = file_menu_model.export_to_lta_on_load
