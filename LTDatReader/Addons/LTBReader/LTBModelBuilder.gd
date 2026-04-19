@@ -55,14 +55,14 @@ func build(source_file, options):
 	skeleton.owner = root
 	self.cheat_skeleton = skeleton
 	
-	print("=== SKELETON DEBUG ===")
-	print("Skeleton hat ", skeleton.get_bone_count(), " Bones")
+	#print("=== SKELETON DEBUG ===")
+	#print("Skeleton hat ", skeleton.get_bone_count(), " Bones")
 	for i in range(skeleton.get_bone_count()):
 		var bone_name = skeleton.get_bone_name(i)
 		var parent_idx = skeleton.get_bone_parent(i)
 		var rest_transform = skeleton.get_bone_rest(i)
-		print("Bone ", i, ": ", bone_name, " | Parent: ", parent_idx)
-		print("  Rest Transform: ", rest_transform)
+		#print("Bone ", i, ": ", bone_name, " | Parent: ", parent_idx)
+		#print("  Rest Transform: ", rest_transform)
 	
 	var meshes = fill_array_mesh(model, skeleton)
 	
@@ -80,7 +80,7 @@ func build(source_file, options):
 		mesh_instance.mesh = mesh
 		
 		mesh_instance.extra_cull_margin = 16.0
-		print("AABB: ", mesh.get_aabb())
+		#print("AABB: ", mesh.get_aabb())
 		# PS2 --> Godot Koordinatensystem-Korrektur
 		if mirror_for_godot:
 			mesh_instance.scale = Vector3(-1.0, 1.0, 1.0)
@@ -91,7 +91,7 @@ func build(source_file, options):
 		
 		# Texture-Path für jedes Piece einzeln berechnen
 		var texture_path = get_dtx_path(source_file, piece.material_index)
-		print("Piece: ", piece.name, " Material_Index: ", piece.material_index, " -> Texture: ", texture_path)
+		#print("Piece: ", piece.name, " Material_Index: ", piece.material_index, " -> Texture: ", texture_path)
 		
 		if File.new().file_exists(texture_path):
 			var texture = texture_builder.build(texture_path, {})
@@ -102,6 +102,8 @@ func build(source_file, options):
 				print("DTX-Fehler: ", texture_path)
 		else:
 			print("DTX nicht gefunden: ", texture_path)
+			material.albedo_color = Color(0.5, 0.5, 0.5)
+			
 		
 		mesh_instance.material_override = material
 		if is_rigid:
@@ -111,8 +113,8 @@ func build(source_file, options):
 			skeleton.add_child(mesh_instance)
 			mesh_instance.owner = root
 		
-		print("Skeleton bone count: ", skeleton.get_bone_count())
-		print("mesh_instance parent: ", mesh_instance.get_parent().name)
+		#print("Skeleton bone count: ", skeleton.get_bone_count())
+		#print("mesh_instance parent: ", mesh_instance.get_parent().name)
 	# End For
 	
 	# Animation time!
@@ -190,7 +192,7 @@ func fill_array_mesh(model, skeleton):
 			
 		var is_rigid = primary_lod.mesh_type == 4	
 		
-		print("  LOD 0 - Vertices: ", primary_lod.vertices.size(), " Faces: ", primary_lod.faces.size())
+		#print("  LOD 0 - Vertices: ", primary_lod.vertices.size(), " Faces: ", primary_lod.faces.size())
 		
 		# Process vertices
 		for vertex in primary_lod.vertices:
@@ -211,7 +213,7 @@ func fill_array_mesh(model, skeleton):
 				uvs.append(Vector2(texcoord.x, texcoord.y))
 				indices.append(vertex_index)
 		
-		print("  Final data - Verts: ", verts.size(), " Indices: ", indices.size(), " UVs: ", uvs.size())
+		#print("  Final data - Verts: ", verts.size(), " Indices: ", indices.size(), " UVs: ", uvs.size())
 		
 		var i = 0
 		for index in indices:
@@ -261,14 +263,14 @@ func fill_array_mesh(model, skeleton):
 	return meshes
 
 func build_skeleton(model, skeleton: Skeleton):
-	print("=== BUILDING SKELETON ===")
-	print("Node count: ", model.node_count)
+	#print("=== BUILDING SKELETON ===")
+	#print("Node count: ", model.node_count)
 	
 	for i in range(model.node_count):
 		var lt_node = model.nodes[i]
 		var bind_matrix = lt_node.bind_matrix
 		
-		print("Adding bone ", i, ": ", lt_node.name)
+		#print("Adding bone ", i, ": ", lt_node.name)
 		skeleton.add_bone(lt_node.name)
 
 		if lt_node.parent != null:
@@ -280,11 +282,11 @@ func build_skeleton(model, skeleton: Skeleton):
 	return skeleton
 
 func process_animations(model, anim_player: AnimationPlayer):
-	print("=== PROCESSING ANIMATIONS ===")
+	#print("=== PROCESSING ANIMATIONS ===")
 	print("Animation count: ", model.animations.size())
 	
 	for lt_anim in model.animations:
-		print("Processing animation: ", lt_anim.name)
+		#print("Processing animation: ", lt_anim.name)
 		var anim = Animation.new()
 		
 		# Pre-make our track ids
@@ -347,8 +349,8 @@ func auto_frame_camera(model_root):
 	var camera_offset = Vector3(camera_distance * 0.7, camera_distance * 0.5, camera_distance * 0.7)
 	var camera_position = model_center + camera_offset
 	
-	print("Model AABB: ", aabb)
-	print("Kamera Position: ", camera_position, " -> Ziel: ", model_center)
+	#print("Model AABB: ", aabb)
+	#print("Kamera Position: ", camera_position, " -> Ziel: ", model_center)
 
 func lt_transform_to_godot_transform(loc, rot):
 	var transform = Transform()

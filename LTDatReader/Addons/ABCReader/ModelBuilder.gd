@@ -106,6 +106,7 @@ func build(source_file, options):
 				print("ERROR: Texture nicht geladen: ", texture_path)
 		else:
 			print("DTX nicht gefunden: ", texture_path)
+			material.albedo_color = Color(0.5, 0.5, 0.5)
 		
 		mesh_instance.material_override = material
 		skeleton.add_child(mesh_instance)

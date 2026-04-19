@@ -13,7 +13,7 @@ var global_controller = null
 var _loaded_file_path = ""
 var _loaded_file = null
 
-var default_model_scale = 0.05
+var default_model_scale = 1.0
 
 
 var loading = false
@@ -208,22 +208,39 @@ func auto_frame_camera(model_root):
 				first_mesh = false
 			else:
 				aabb = aabb.merge(mesh_aabb)
+				#print("mesh AABB merged: ", mesh_aabb)
 		for child in node.get_children():
 			queue.append(child)
 	if first_mesh:
 		return
 	var center = aabb.position + aabb.size * 0.5
 	var size = aabb.size.length()
-	var dist = max(size * 0.8, 5.0)
 	
-	# Move model so AABB center is at origin - trackball rotates around origin
-	model_root.global_transform.origin -= center
+	# Automatische Skalierung damit Modell gut sichtbar ist
+	var target_size = 20.0  # Zielgröße in Godot-Einheiten
+	var auto_scale = target_size / size
+	model_root.scale = Vector3(auto_scale, auto_scale, auto_scale)
+	
+	#print("model_root scale nach set: ", model_root.scale)
+	#print("model_root origin nach set: ", model_root.global_transform.origin)
+
+	# AABB neu berechnen nach Skalierung
+	size = target_size
+	# Kleiner auto_scale = großes Modell = näher ran
+	# Großer auto_scale = kleines Modell = weiter weg
+	var dist = size * lerp(0.6, 1.5, clamp(auto_scale, 0.0, 1.0))
+	
+	# Dann AABB neu berechnen und zentrieren
+	var new_center = center * auto_scale
+	model_root.global_transform.origin -= new_center
+	
+	
 	# Switch to trackball camera for free rotation
 	var trackball = get_node_or_null("/root/Root/Camera")
 	var freelook = get_node_or_null("/root/Root/FreeLook")
 	
-	print("auto_frame_camera: center=", center, " size=", size, " dist=", dist)
-	print("freelook pos: ", freelook.global_transform.origin if freelook != null else "null")
+	#print("auto_frame_camera: center=", center, " size=", size, " dist=", dist)
+	#print("freelook pos: ", freelook.global_transform.origin if freelook != null else "null")
 	# if trackball != null:
 		# trackball.global_transform.origin = Vector3(0.0, 0.0, dist)
 		# trackball.look_at(Vector3.ZERO, Vector3.UP)
@@ -235,7 +252,7 @@ func auto_frame_camera(model_root):
 		freelook.global_transform.origin = Vector3(0.0, 0.0, dist)
 		freelook.look_at(Vector3.ZERO, Vector3.UP)
 		freelook.make_current()
-		print("freelook nach set: ", freelook.global_transform.origin)
+		#print("freelook nach set: ", freelook.global_transform.origin)
 	if trackball != null:
 		trackball.clear_current(false)	
 

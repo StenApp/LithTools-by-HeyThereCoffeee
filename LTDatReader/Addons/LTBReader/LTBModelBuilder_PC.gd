@@ -132,6 +132,7 @@ func _create_mesh_instance(piece, lod, ltb_pc, skeleton) -> MeshInstance:
 	# Apply basic material
 	var material = SpatialMaterial.new()
 	material.flags_unshaded = true
+	material.albedo_color = Color(0.5, 0.5, 0.5)
 	material.vertex_color_use_as_albedo = true
 	mesh_instance.set_surface_material(0, material)
 	
