@@ -47,7 +47,7 @@ func build(source_file, options):
 		if lod.vertices.size() == 0 or lod.faces.size() == 0:
 			continue
 		
-		var mesh_instance = _create_mesh_instance(piece, lod, ltb_pc, skeleton)
+		var mesh_instance = _create_mesh_instance(piece, lod, ltb_pc, skeleton, source_file)
 		
 		if mesh_instance:
 			root.add_child(mesh_instance)
@@ -81,7 +81,7 @@ func _create_skeleton(ltb_pc) -> Skeleton:
 	
 	return skeleton
 
-func _create_mesh_instance(piece, lod, ltb_pc, skeleton) -> MeshInstance:
+func _create_mesh_instance(piece, lod, ltb_pc, skeleton, source_file = "") -> MeshInstance:
 	var st = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	
@@ -129,11 +129,27 @@ func _create_mesh_instance(piece, lod, ltb_pc, skeleton) -> MeshInstance:
 	mesh_instance.name = piece.name
 	mesh_instance.mesh = mesh
 	
-	# Apply basic material
+	# Material mit Textur
 	var material = SpatialMaterial.new()
 	material.flags_unshaded = true
-	material.albedo_color = Color(0.5, 0.5, 0.5)
-	material.vertex_color_use_as_albedo = true
+	
+	if source_file != "":
+		var texture_builder = load("res://Addons/DTXReader/TextureBuilder.gd").new()
+		var texture_path = source_file.get_base_dir().replace("models", "skins") + "/" + source_file.get_file().get_basename() + ".dtx"
+		if File.new().file_exists(texture_path):
+			var texture = texture_builder.build(texture_path, {})
+			if texture != null:
+				material.albedo_texture = texture
+				print("PC Texture geladen: ", texture_path)
+			else:
+				print("PC DTX Fehler: ", texture_path)
+				material.albedo_color = Color(0.5, 0.5, 0.5)
+		else:
+			print("PC DTX nicht gefunden: ", texture_path)
+			material.albedo_color = Color(0.5, 0.5, 0.5)
+	else:
+		material.albedo_color = Color(0.5, 0.5, 0.5)
+	
 	mesh_instance.set_surface_material(0, material)
 	
 	# Mirror for Godot coordinates (like in WorldBuilder)
