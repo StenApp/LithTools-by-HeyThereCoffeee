@@ -131,7 +131,7 @@ func _create_mesh_instance(piece, lod, ltb_pc, skeleton, source_file = "") -> Me
 	
 	# Material mit Textur
 	var material = SpatialMaterial.new()
-	material.flags_unshaded = true
+	material.flags_unshaded = false
 	
 	if source_file != "":
 		var texture_builder = load("res://Addons/DTXReader/TextureBuilder.gd").new()

@@ -87,7 +87,7 @@ func build(source_file, options):
 		
 		# Create material with DTX texture
 		var material = SpatialMaterial.new()
-		material.flags_unshaded = true
+		material.flags_unshaded = false
 		
 		# Texture-Path für jedes Piece einzeln berechnen
 		var texture_path = get_dtx_path(source_file, piece.material_index)
