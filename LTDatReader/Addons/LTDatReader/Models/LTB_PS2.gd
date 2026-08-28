@@ -60,7 +60,7 @@ class LTB_PS2:
 	
 	enum IMPORT_RETURN{SUCCESS, PARTIAL, ERROR}
 	
-	func read(f : File, dont_import_world_models = false):
+	func read(f : File, dont_import_world_models = false, skip_lightmaps = false):
 		
 		self.version = f.get_32()
 		
