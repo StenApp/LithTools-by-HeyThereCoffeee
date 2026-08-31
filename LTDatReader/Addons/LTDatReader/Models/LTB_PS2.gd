@@ -60,7 +60,7 @@ class LTB_PS2:
 	
 	enum IMPORT_RETURN{SUCCESS, PARTIAL, ERROR}
 	
-	func read(f : File, dont_import_world_models = false, skip_lightmaps = false):
+	func read(f : File, dont_import_world_models = false):
 		
 		self.version = f.get_32()
 		
@@ -405,30 +405,32 @@ class LTB_PS2:
 		class DiskVert:
 			var vertex_index = 0
 			var dummy = []
-			var unknown_float_1 = 0.0
-			var unknown_float_2 = 0.0
+			var u = 0.0
+			var v = 0.0
 			
-			func read(ltb: LTB_PS2, f : File, is_packed = false):
+			# needs_extra_bytes wird VORHER aus den Surface-Flags bestimmt (Bit 7 gesetzt
+			# UND Bit 3 nicht gesetzt -> 20 Bytes/Vertex statt 16), nicht mehr durch
+			# Raten anhand des gelesenen Zahlenwerts. Uebernommen aus ps2topc_complet.py
+			# (read_model()): sz = cnt * (20 if f & 1<<7 and not f & 1<<3 else 16)
+			func read(ltb: LTB_PS2, f : File, is_packed = false, needs_extra_bytes = false):
 				if is_packed == true:
 					self.vertex_index = f.get_32()
-					self.unknown_float_1 = 0.0
-					self.unknown_float_2 = 0.0
+					self.u = 0.0
+					self.v = 0.0
 					return
 				
 				self.vertex_index = f.get_16()	
 				self.dummy = Array(f.get_buffer(2))
 				
-				self.unknown_float_1 = f.get_float()
-				self.unknown_float_2 = f.get_float()
+				self.u = f.get_float()
+				self.v = f.get_float()
 
 						
 				var unknown3 = f.get_32()
 
-				# Hack follows ONLY if Unknown3 is in range between 1.0 - 1.2 milliards
-				if unknown3 >= 1000000000 and unknown3 < 1200000000:
-					var hack = f.get_32()
-				# else (2133073948, 2139127936, or others) --> no Hack
-				
+				if needs_extra_bytes:
+					var extra = f.get_32()
+			
 			# End Func
 		# End Class
 		
@@ -486,6 +488,9 @@ class LTB_PS2:
 			
 			# If it's translucent then it's packed
 			var is_packed = ( (surface.flags & (1<<2)) != 0 )
+			# Bit 7 gesetzt UND Bit 3 NICHT gesetzt -> 4 Bytes mehr pro Vertex noetig.
+			# Deterministisch aus den Surface-Flags (wie ps2topc_complet.py), nicht geraten.
+			var needs_extra_bytes = ( (surface.flags & (1<<7)) != 0 ) and ( (surface.flags & (1<<3)) == 0 )
 			
 			#if is_packed:
 			self.uv1 = surface.uv1
@@ -497,7 +502,7 @@ class LTB_PS2:
 				# 5 bytes of usable
 				#disk_verts.append(f.get_buffer(5))
 				var disk_vert = WorldPoly.DiskVert.new()
-				disk_vert.read(ltb, f, is_packed)
+				disk_vert.read(ltb, f, is_packed, needs_extra_bytes)
 				disk_verts.append(disk_vert)
 		# End Func
 		

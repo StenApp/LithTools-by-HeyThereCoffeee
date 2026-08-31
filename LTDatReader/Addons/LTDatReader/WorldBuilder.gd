@@ -345,7 +345,7 @@ func convert_uv_to_opq_lithtech_original(poly, world_model, model, tex_width: in
 	for i in range(3):  # Hardcoded to 3 as in original uvtoopq.cpp
 		var disk_vert = poly.disk_verts[i]
 		var world_pos = world_model.points[disk_vert.vertex_index]
-		var uv = Vector2(disk_vert.unknown_float_1, disk_vert.unknown_float_2)
+		var uv = Vector2(disk_vert.u, disk_vert.v)
 		
 		positions.append(world_pos)
 		uv_coords.append(uv)
@@ -809,9 +809,9 @@ func fill_array_mesh(model, world_models = []):
 				# if not is_packed and poly.disk_verts.size() >= 3:
 					# print("POLY_%d [%s] uv0=(%.4f,%.4f) uv1=(%.4f,%.4f) uv2=(%.4f,%.4f)" % [
 						# poly_index, texture_name,
-						# poly.disk_verts[0].unknown_float_1, poly.disk_verts[0].unknown_float_2,
-						# poly.disk_verts[1].unknown_float_1, poly.disk_verts[1].unknown_float_2,
-						# poly.disk_verts[2].unknown_float_1, poly.disk_verts[2].unknown_float_2
+						# poly.disk_verts[0].u, poly.disk_verts[0].v,
+						# poly.disk_verts[1].u, poly.disk_verts[1].v,
+						# poly.disk_verts[2].u, poly.disk_verts[2].v
 					# ])
 				
 			else:
@@ -845,7 +845,7 @@ func fill_array_mesh(model, world_models = []):
 						# Packed: OPQ aus Surface, direkte Formel reicht (nur invisible.dtx)
 						uvs.append(opq_to_uv_pc(vert, O, P, Q, tex_width, tex_height))
 					"ps2_direct":
-						uvs.append(Vector2(disk_vert.unknown_float_1, disk_vert.unknown_float_2))
+						uvs.append(Vector2(disk_vert.u, disk_vert.v))
 					"pc_simple":
 						uvs.append(opq_to_uv_pc(vert, O, P, Q, tex_width, tex_height))
 
