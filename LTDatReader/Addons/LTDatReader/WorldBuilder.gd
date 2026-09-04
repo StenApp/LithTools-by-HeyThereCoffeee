@@ -425,20 +425,13 @@ static func convert_uv_to_opq(positions: Array, uv_coords: Array, tex_width: int
 	var p_scale = 1.0 / P.dot(P_new) if abs(P.dot(P_new)) > 0.001 else 1.0
 	var q_scale = 1.0 / Q.dot(Q_new) if abs(Q.dot(Q_new)) > 0.001 else 1.0
 	
-	R = Q_new.cross(P_new)
-	
 	P_new *= tp * p_scale
 	Q_new *= tq * q_scale
 	
-	# Orthogonalize P and Q (final step)
-	R = R.normalized()
-	P = P_new + R
-	Q = Q_new - (P_new.dot(Q_new) * R)
-	
 	return {
 		"O": O,
-		"P": P, 
-		"Q": Q
+		"P": P_new, 
+		"Q": Q_new
 	}
 
 func build_array_mesh(textured_meshes):
