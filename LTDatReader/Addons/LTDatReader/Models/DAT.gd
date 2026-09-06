@@ -1287,7 +1287,10 @@ class DAT:
 			elif self.code == PROP_LONG_INT:
 				return [ 'longint', self.name, self.value ]
 			elif self.code == PROP_ROTATION:
-				return [ 'rotation', self.name, '___eulerangles', self.value.normalized().get_euler() ]
+				var q = self.value
+				if q.length_squared() < 0.0001:
+					return [ 'rotation', self.name, '___eulerangles', Vector3(0, 0, 0) ]
+				return [ 'rotation', self.name, '___eulerangles', q.normalized().get_euler() ]
 			# End If
 		# End Func
 	# End Class
