@@ -598,7 +598,7 @@ class DAT:
 		# Lithtech 1 for now
 		var lightmap_texture = null
 		
-		func read(dat: DAT, f: File, vert_count = 0):
+		func read(dat: DAT, f: File, vert_count = 0, surfaces = []):
 			if dat.is_lithtech_jupiter():
 				self.surface_index = f.get_32()
 				self.plane_index = f.get_32()
@@ -632,6 +632,10 @@ class DAT:
 			elif dat.is_lithtech_2():
 				self.surface_index = f.get_16()
 				self.plane_index = f.get_16()
+				var surface = surfaces[self.surface_index]
+				self.uv1 = surface.uv1
+				self.uv2 = surface.uv2
+				self.uv3 = surface.uv3
 			elif dat.is_lithtech_talon():
 				self.surface_index = f.get_32()
 				self.plane_index = f.get_32()
@@ -957,7 +961,7 @@ class DAT:
 			
 			for i in range(self.poly_count):
 				var poly = WorldPoly.new()
-				poly.read(dat, f, self.verts[i])
+				poly.read(dat, f, self.verts[i], self.surfaces)
 				
 				if poly.lightmap_width > biggest_lm_width:
 					biggest_lm_width = poly.lightmap_width
