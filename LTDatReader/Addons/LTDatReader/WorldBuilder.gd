@@ -682,16 +682,23 @@ func fill_array_mesh(model, world_models = []):
 	big_lightmap_image.blit_rect(white_image, Rect2(Vector2(0,0), Vector2(2,2)), Vector2(LIGHTMAP_ATLAS_SIZE - 2, LIGHTMAP_ATLAS_SIZE - 2))
 	print("DEBUG big_lightmap_image done")
 
+	var debug_physics_only = false  # bei Bedarf auf true setzen
+
 	var skip_models = [
-	"VisBSP",
+		"VisBSP",
 	]
-	
+
 	for world_model_index in range(len(world_models)):
 		var world_model = world_models[world_model_index]
 		
-		if world_model.world_name in skip_models:
-			print("Skipping " + world_model.world_name)
-			continue
+		if debug_physics_only:
+			if world_model.world_name != "PhysicsBSP":
+				print("Skipping " + world_model.world_name)
+				continue
+		else:
+			if world_model.world_name in skip_models:
+				print("Skipping " + world_model.world_name)
+				continue
 		
 		print("Processing World Model " + world_model.world_name)
 		
