@@ -79,6 +79,12 @@ class DTX:
 	
 	var image : Image
 	
+	func get_effective_width() -> int:
+		return int(max(1, self.width >> self.mipmap_offset))
+
+	func get_effective_height() -> int:
+		return int(max(1, self.height >> self.mipmap_offset))
+	
 	func _init():
 		pass
 	# End Func

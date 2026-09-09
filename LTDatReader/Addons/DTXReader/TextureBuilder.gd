@@ -1,6 +1,8 @@
 extends Node
 
 var last_flags = 0
+var last_effective_width = 0
+var last_effective_height = 0
 var _dtx_script = preload("res://Addons/DTXReader/Models/DTX.gd")
 
 func build(source_file, options):
@@ -17,6 +19,8 @@ func build(source_file, options):
 	if response.code == model.IMPORT_RETURN.ERROR:
 		return null
 	self.last_flags = model.flags
+	self.last_effective_width = model.get_effective_width()
+	self.last_effective_height = model.get_effective_height()
 		
 	var texture = ImageTexture.new()
 	if model.image.is_compressed():
