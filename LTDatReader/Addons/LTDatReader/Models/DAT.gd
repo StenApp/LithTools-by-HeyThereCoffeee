@@ -1262,7 +1262,11 @@ class DAT:
 				self.value = f.get_float()
 			elif self.code == PROP_BOOL:
 				self.value = f.get_8()
-			elif self.code == PROP_FLAGS or self.code == PROP_LONG_INT or self.code == PROP_UNK_INT:
+			elif self.code == PROP_FLAGS or self.code == PROP_LONG_INT:
+				# LONGINT/FLAGS werden von der Engine als Float serialisiert und
+				# beim Laden per (int32)floatValue gecastet (Lithtech/runtime/server/src/s_object.cpps_object.cpp, Zeile 481-489).
+				self.value = int(f.get_float())
+			elif self.code == PROP_UNK_INT:
 				self.value = f.get_32()
 			elif self.code == PROP_ROTATION:
 				self.value = dat.read_quat(f)

@@ -302,7 +302,8 @@ struct ObjectProperty {
         break;
         case 4: // Flags
         case 6: // Long Int
-        uint Value;
+        float Value;
+        local int32 LongIntValue = (int32)Value;
         break;
         case 7: // Rotation
         LTQuaternion Value;

@@ -918,7 +918,7 @@ class LTB_PS2:
 			elif self.code == PROP_BOOL:
 				self.value = f.get_8()
 			elif self.code == PROP_FLAGS or self.code == PROP_LONG_INT:
-				self.value = f.get_float()
+				self.value = int(f.get_float())
 			elif self.code == PROP_ROTATION:
 				self.value = ltb.read_vector3(f)
 				var dummy = f.get_float()
