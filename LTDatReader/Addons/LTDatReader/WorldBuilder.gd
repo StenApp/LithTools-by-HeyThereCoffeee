@@ -660,7 +660,7 @@ func fill_array_mesh_jupiter(model, world_meshes = []):
 	pass
 
 func fill_array_mesh(model, world_models = []):
-	print("DEBUG fill_array_mesh called, world_models count: ", len(world_models))
+	#print("DEBUG fill_array_mesh called, world_models count: ", len(world_models))
 
 	var mesh_names = []
 	var meshes = []
@@ -754,6 +754,12 @@ func fill_array_mesh(model, world_models = []):
 					texture_name = ""	
 			
 			#print("World '", world_model.world_name, "' - Polygon ", poly_index, " verwendet Textur: ", texture_name, " (Index: ", texture_index, ")")
+			
+			if texture_name == "" and surface.texture_flags != 0:
+				push_error("Texturname leer, aber texture_flags=%d (≠0) — vermutlich Lesefehler, nicht 'keine Textur'!" % surface.texture_flags)
+				# Fallthrough: Poly wird trotzdem mit Fallback-Textur gerendert, damit der Bug SICHTBAR bleibt
+			elif texture_name == "" and surface.texture_flags == 0:
+				continue  # legitime texturlose Fläche, überspringen
 			
 			var tex = get_texture(texture_name)
 			var tex_width = 64

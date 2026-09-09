@@ -670,6 +670,11 @@ class LTB_PS2:
 		
 		func read(ltb : LTB_PS2, f : File):
 			self.world_name = ltb.read_string(f)
+			
+			if self.world_name == "VisBSP":
+				print("Skipping reading of VisBSP")
+				return
+			
 			print("Reading World Model Name: ",self.world_name)
 			
 			self.world_info_flags = f.get_32()

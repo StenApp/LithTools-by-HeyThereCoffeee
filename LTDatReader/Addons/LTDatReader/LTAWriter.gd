@@ -529,11 +529,14 @@ class LTAWriter:
 
 				
 				texture_info_node.create_child('sticktopoly', 1)
-								
+				
 				#name is optional, so if we have no texture name, don't create it
+				if texture_name == "" and surface.texture_flags != 0:
+					push_error("Texturname leer, aber texture_flags=%d (≠0) — vermutlich Lesefehler beim Export!" % surface.texture_flags)
+
 				if texture_name != "" and texture_name != "missing_texture":
 					texture_info_node.create_child('name', texture_name)
-				
+								
 				edit_poly.create_child('flags')
 				edit_poly.create_child('shade', [0,0,0])
 				# edit_poly.create_child('physicsmaterial', 'Default')

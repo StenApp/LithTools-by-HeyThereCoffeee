@@ -863,10 +863,12 @@ class DAT:
 			# End If
 			
 			self.world_name = dat.read_string(f)
-			print("Reading World Model Name: ",self.world_name)
-			
+
 			if self.world_name in skip_names:
+				print("Skipping reading of ", self.world_name)
 				return  # skip reading, caller will seek via NextWorldItem
+
+			print("Reading World Model Name: ",self.world_name)
 			
 			if dat.is_lithtech_1():
 				var next_position = f.get_32()
