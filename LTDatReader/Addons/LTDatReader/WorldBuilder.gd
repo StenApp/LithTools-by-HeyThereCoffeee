@@ -12,6 +12,7 @@ var last_build_type = "level"  # "level", "model_ps2", "model_pc"
 
 const LIGHTMAP_ATLAS_SIZE = 2048.0#4096.0#2048.0
 const ENABLE_LT2_LIGHTMAPS = false
+const EPS = 0.001
 
 func chunk(array, by): 
 	var chunks = []
@@ -300,18 +301,49 @@ func build(source_file, options):
 
 var cached_textures = {}
 var cached_texture_dims = {}
+
 func get_texture(tex_name):
 	if tex_name in cached_textures:
 		return cached_textures[tex_name]
 	var tex = dtx_reader.build(texture_path + tex_name, [])
+	if tex == null:
+		print("TEXTURE LOADING ERROR: ", tex_name, " -> get_texture() provides NULL!")
 	cached_textures[tex_name] = tex
 	if tex != null:
 		cached_texture_dims[tex_name] = Vector2(dtx_reader.last_effective_width, dtx_reader.last_effective_height)
+		if tex_name.to_lower().find("invisible") != -1:
+			# print("INVISIBLE-Debug: raw_width=", dtx_reader.last_raw_width, " raw_height=", dtx_reader.last_raw_height,
+				# " mipmap_offset=", dtx_reader.last_mipmap_offset,
+				# " effective=", dtx_reader.last_effective_width, "x", dtx_reader.last_effective_height,
+				# " version=", dtx_reader.last_version)
 	return tex
 # End Func
 
 func clear_texture_cache():	
 	cached_textures.clear()
+
+# Fallback für degenerierte OPQ (z.B. nie ausgerichtete Invisible.dtx-Flächen):
+# klassische achsparallele Projektion, abhängig von der dominanten Normalen-Achse
+func get_axis_aligned_pq(normal: Vector3) -> Array:
+	var abs_n = Vector3(abs(normal.x), abs(normal.y), abs(normal.z))
+	if abs_n.z >= abs_n.x and abs_n.z >= abs_n.y:
+		return [Vector3(1, 0, 0), Vector3(0, -1, 0)]
+	elif abs_n.x >= abs_n.y and abs_n.x >= abs_n.z:
+		return [Vector3(0, 0, 1), Vector3(0, -1, 0)]
+	else:
+		return [Vector3(1, 0, 0), Vector3(0, 0, 1)]
+
+func is_opq_degenerate(p: Vector3, q: Vector3, real_normal: Vector3) -> bool:
+	var eps = 0.001
+	if p.length() < eps or q.length() < eps:
+		return true
+	if p.normalized().cross(q.normalized()).length() < eps:
+		return true
+	# NEU: Passt die aus P/Q abgeleitete Normale zur echten Flächennormale?
+	var derived_normal = p.normalized().cross(q.normalized()).normalized()
+	if abs(derived_normal.dot(real_normal.normalized())) < 0.9:
+		return true
+	return false
 
 
 # OPQ to UV - standard LithTech formula, used for both PC and PS2 packed surfaces
@@ -791,12 +823,13 @@ func fill_array_mesh(model, world_models = []):
 				var is_packed = (surface.flags & (1 << 2)) != 0
 				calculation_method = "ps2_opq" if is_packed else "ps2_direct"
 				
-				# UV offset debug
-				# if not is_packed:
-					# print("POLY_%d [%s] u2=%d u3=%d unk5=%.4f unk6=%.4f" % [
-						# poly_index, texture_name,
-						# poly.unknown2, poly.unknown3,
-						# poly.unknown5, poly.unknown6
+				# Fallback: nie ausgerichtete Flächen (z.B. Invisible.dtx) haben oft
+				# entartete P/Q (nahe Null oder nahe parallel) -> Streifenmuster.
+				# DEdit löst das manuell per "Reset Texture Coordinates" -> hier nachgebildet.
+				if is_packed and is_opq_degenerate(P, Q, plane.normal):
+					var fallback = get_axis_aligned_pq(plane.normal)
+					P = fallback[0]
+					Q = fallback[1]
 					# ])
 				
 				# OPQ debug

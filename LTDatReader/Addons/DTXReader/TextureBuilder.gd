@@ -3,6 +3,10 @@ extends Node
 var last_flags = 0
 var last_effective_width = 0
 var last_effective_height = 0
+var last_raw_width = 0
+var last_raw_height = 0
+var last_mipmap_offset = 0
+var last_version = 0
 var _dtx_script = preload("res://Addons/DTXReader/Models/DTX.gd")
 
 func build(source_file, options):
@@ -21,6 +25,10 @@ func build(source_file, options):
 	self.last_flags = model.flags
 	self.last_effective_width = model.get_effective_width()
 	self.last_effective_height = model.get_effective_height()
+	self.last_raw_width = model.width
+	self.last_raw_height = model.height
+	self.last_mipmap_offset = model.mipmap_offset
+	self.last_version = model.version
 		
 	var texture = ImageTexture.new()
 	if model.image.is_compressed():
