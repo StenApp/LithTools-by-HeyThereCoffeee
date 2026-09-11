@@ -311,7 +311,7 @@ func get_texture(tex_name):
 	cached_textures[tex_name] = tex
 	if tex != null:
 		cached_texture_dims[tex_name] = Vector2(dtx_reader.last_effective_width, dtx_reader.last_effective_height)
-		if tex_name.to_lower().find("invisible") != -1:
+		#if tex_name.to_lower().find("invisible") != -1:
 			# print("INVISIBLE-Debug: raw_width=", dtx_reader.last_raw_width, " raw_height=", dtx_reader.last_raw_height,
 				# " mipmap_offset=", dtx_reader.last_mipmap_offset,
 				# " effective=", dtx_reader.last_effective_width, "x", dtx_reader.last_effective_height,
