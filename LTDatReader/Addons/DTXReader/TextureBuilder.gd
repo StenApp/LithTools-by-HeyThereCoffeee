@@ -10,6 +10,7 @@ var last_version = 0
 var _dtx_script = preload("res://Addons/DTXReader/Models/DTX.gd")
 
 var cached_textures = {}
+var missing_textures = []
 var cached_texture_dims = {}
 
 func build(source_file, options):
@@ -49,6 +50,8 @@ func get_cached(texture_path: String, tex_name: String):
 	var tex = build(texture_path + tex_name, [])
 	if tex == null:
 		print("Texture not found under: ", texture_path + tex_name)
+		if not missing_textures.has(texture_path + tex_name):
+			missing_textures.append(texture_path + tex_name)
 	cached_textures[tex_name] = tex
 	if tex != null:
 		cached_texture_dims[tex_name] = Vector2(last_effective_width, last_effective_height)
@@ -59,3 +62,4 @@ func get_cached_dims(tex_name: String) -> Vector2:
 
 func clear_cache():
 	cached_textures.clear()
+	missing_textures.clear()

@@ -292,10 +292,11 @@ func build(source_file, options):
 		var dir_path = source_file.get_base_dir()
 		var base_name = source_file.get_file().get_basename()
 		var out_path = dir_path.plus_file(base_name + ".lta")
+		var missing_tex_path = dir_path.plus_file(base_name + "_missing_tex.txt")
 
 		print("Exporting LTA to " + out_path)
 		
-		var result = writer.write(model, out_path, 2)
+		var result = writer.write(model, out_path, 2, dtx_reader.missing_textures, missing_tex_path)
 		if result != OK:
 			push_error("Failed to write LTA file: " + str(result))
 			root.free()  # Leak-Fix: root traegt an dieser Stelle bereits alle MeshInstances
@@ -671,6 +672,14 @@ func fill_array_mesh(model, world_models = []):
 					var fallback = UVMath.get_axis_aligned_pq(plane.normal)
 					P = fallback[0]
 					Q = fallback[1]
+					
+					# Zurueckschreiben fuer den Export - mit der UNVERAENDERTEN
+					# EditPoly.cpp-Formel (kein Godot-Spiegel-Ausgleich noetig,
+					# DEdit liest die rohen LithTech-Koordinaten direkt).
+					var export_fallback = UVMath.get_axis_aligned_pq_raw(plane.normal)
+					poly.O = O
+					poly.P = export_fallback[0]
+					poly.Q = export_fallback[1]
 					# ])
 				
 				# OPQ debug
@@ -693,6 +702,12 @@ func fill_array_mesh(model, world_models = []):
 					P = poly.P
 					Q = poly.Q
 				calculation_method = "pc_simple"
+				
+				if "invisible" in texture_name:
+					print("OPQDUMP PC normal=(%.4f,%.4f,%.4f) dist=%.4f O=(%.4f,%.4f,%.4f) P=(%.4f,%.4f,%.4f) Q=(%.4f,%.4f,%.4f)" % [
+						plane.normal.x, plane.normal.y, plane.normal.z, plane.dist,
+						O.x, O.y, O.z, P.x, P.y, P.z, Q.x, Q.y, Q.z
+					])
 				
 			# Process each vertex
 			for disk_vert_index in range(len(poly.disk_verts)):

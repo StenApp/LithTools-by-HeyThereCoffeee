@@ -734,7 +734,6 @@ class LTNode:
 	var index = 0
 	var bind_matrix = Transform()
 	var child_count = 0
-	var parent = null
 	var children = []
 
 class OrderedVertex:

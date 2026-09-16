@@ -406,7 +406,6 @@ class LTNode:
 	var index = 0
 	var bind_matrix = Transform()
 	var children = []
-	var parent = null
 	
 	func read(ltb, f: File, depth: int) -> bool:
 		# Protect against infinite recursion
@@ -435,7 +434,6 @@ class LTNode:
 			var child = LTNode.new()
 			if not child.read(ltb, f, depth + 1):
 				return false
-			child.parent = self
 			children.append(child)
 		
 		return true

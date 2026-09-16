@@ -16,13 +16,67 @@ extends Reference
 # Fallback fuer degenerierte OPQ (z.B. nie ausgerichtete Invisible.dtx-Flaechen):
 # klassische achsparallele Projektion, abhaengig von der dominanten Normalen-Achse
 static func get_axis_aligned_pq(normal: Vector3) -> Array:
-	var abs_n = Vector3(abs(normal.x), abs(normal.y), abs(normal.z))
-	if abs_n.z >= abs_n.x and abs_n.z >= abs_n.y:
-		return [Vector3(1, 0, 0), Vector3(0, -1, 0)]
-	elif abs_n.x >= abs_n.y and abs_n.x >= abs_n.z:
-		return [Vector3(0, 0, 1), Vector3(0, -1, 0)]
-	else:
-		return [Vector3(1, 0, 0), Vector3(0, 0, 1)]
+	# Echte LithTech-Tabelle aus EditPoly.cpp (SetupBaseTextureSpace),
+	# 6 einzelne Faelle - Ost/West bzw. Nord/Sued NICHT per abs()
+	# zusammengefasst (das war der Fehler: gegenueberliegende Waende
+	# bekamen dieselbe Ausrichtung und eine davon war dadurch immer
+	# spiegelverkehrt - bestaetigt an echten Godot-Screenshots).
+	var planes = [
+		Vector3(0, 1, 0),   # Bottom
+		Vector3(0, -1, 0),  # Top
+		Vector3(1, 0, 0),   # East
+		Vector3(-1, 0, 0),  # West
+		Vector3(0, 0, 1),   # North
+		Vector3(0, 0, -1),  # South
+	]
+	var right_vectors = [
+		Vector3(1, 0, 0),   # Bottom
+		Vector3(-1, 0, 0),  # Top
+		Vector3(0, 0, 1),   # East
+		Vector3(0, 0, -1),  # West
+		Vector3(-1, 0, 0),  # North
+		Vector3(1, 0, 0),   # South
+	]
+
+	var best_dot = -INF
+	var best_i = 0
+	for i in range(6):
+		var d = normal.dot(planes[i])
+		if d > best_dot:
+			best_dot = d
+			best_i = i
+
+	var P = right_vectors[best_i]
+	var Q = planes[best_i].cross(P)
+	return [P, Q]
+
+# Gleiche Achsen-Auswahl wie oben, aber mit der Original-EditPoly.cpp-
+# Kreuzprodukt-Reihenfolge (P.cross(plane), NICHT gedreht). Der Godot-Viewer
+# braucht die gedrehte Version oben (kompensiert Godots eigenen "-1 X-Scale"-
+# Spiegel, der nur fuer die Darstellung draufkommt) - fuer den LTA-Export
+# (von DEdit nativ gelesen, ohne jeden Godot-Spiegel) ist dagegen die
+# unveraenderte Original-Formel richtig.
+static func get_axis_aligned_pq_raw(normal: Vector3) -> Array:
+	var planes = [
+		Vector3(0, 1, 0), Vector3(0, -1, 0),
+		Vector3(1, 0, 0), Vector3(-1, 0, 0),
+		Vector3(0, 0, 1), Vector3(0, 0, -1),
+	]
+	var right_vectors = [
+		Vector3(1, 0, 0), Vector3(-1, 0, 0),
+		Vector3(0, 0, 1), Vector3(0, 0, -1),
+		Vector3(-1, 0, 0), Vector3(1, 0, 0),
+	]
+	var best_dot = -INF
+	var best_i = 0
+	for i in range(6):
+		var d = normal.dot(planes[i])
+		if d > best_dot:
+			best_dot = d
+			best_i = i
+	var P = right_vectors[best_i]
+	var Q = -P.cross(planes[best_i])  # Export: Flip Y, empirisch bestaetigt (DEdit-Screenshot)
+	return [P, Q]
 
 
 static func is_opq_degenerate(p: Vector3, q: Vector3, real_normal: Vector3) -> bool:

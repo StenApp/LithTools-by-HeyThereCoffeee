@@ -285,7 +285,6 @@ class ABC:
 		var child_count = 0
 		
 		# Links
-		var parent = null
 		var children = []
 		
 		func read(abc : ABC, f : File):
@@ -303,7 +302,6 @@ class ABC:
 			var node = node_list[node_index]
 			
 			if (parent != null):
-				node.parent = parent
 				parent.children.append(node)
 			
 			for _i in range(node.child_count):

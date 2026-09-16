@@ -26,6 +26,13 @@ class LTANode:
 	var _attribute = null
 	var _depth = 0
 	var _children = []
+	# Wenn true: dieser Knoten (und alles darunter) wird als EINE Zeile
+	# geschrieben, statt der normalen mehrzeiligen/eingerueckten Rekursion.
+	# Echte LTA-Dateien (DEdit-Export) schreiben proplist-Eintraege (string/
+	# vector/rotation/bool/real usw.) so - jede Property genau eine Zeile,
+	# waehrend die umgebende Struktur (world/proplist/editpoly/...) normal
+	# mehrzeilig bleibt. Siehe Vergleich mit sample1.lta/sample2.lta.
+	var _compact = false
 
 	func _init(name='unnamed-node', attribute=null):
 		self._name = name
@@ -73,9 +80,18 @@ class LTANode:
 		
 	func create_prop_entry(type, name, data):
 		var item = self.create_child(type, name)
-		item.create_container()
+		item._compact = true
 		if PROP_LABELS.has(name):
-			item.create_child(PROP_LABELS[name])
+			var label = PROP_LABELS[name]
+			var labels_arr = label if typeof(label) == TYPE_ARRAY else [label]
+			var prefixed = []
+			for l in labels_arr:
+				# "___"-Praefix -> _serialize_string() gibt es unquoted aus
+				# (bloßes Wort, kein String-Literal) - siehe _serialize_string().
+				prefixed.append("___" + l)
+			item.create_child('', prefixed)
+		else:
+			item.create_container()
 		if data != null:
 			item.create_child('data', data)
 		return item	
@@ -83,6 +99,9 @@ class LTANode:
 		
 	# Loop through all the children and write out their props and depth
 	func serialize():
+		if self._compact:
+			return self._write_depth() + self._serialize_compact_inner() + "\r\n"
+
 		var output_string = ""
 
 		# Add our current depth in tabs
@@ -95,11 +114,11 @@ class LTANode:
 
 		# If we have no children, let's early out
 		if len(self._children) == 0:
-			output_string += ")\n"
+			output_string += ")\r\n"
 			return output_string
 
 		# Ok add a new line for our children!
-		output_string += "\n"
+		output_string += "\r\n"
 
 		for child in self._children:
 			output_string += child.serialize()
@@ -107,7 +126,23 @@ class LTANode:
 		# Once again...add our current depth in tabs
 		output_string += self._write_depth()
 
-		output_string += ")\n"
+		output_string += ")\r\n"
+
+		return output_string
+
+	# Kompakte Serialisierung: dieser Knoten + alle Nachfahren auf EINE Zeile,
+	# nur durch Leerzeichen getrennt, keine weiteren Zeilenumbrueche/Tabs.
+	# Wird von serialize() aufgerufen, wenn _compact gesetzt ist.
+	func _serialize_compact_inner(is_outer: bool = true):
+		var output_string = "(" + ("  " if is_outer else " ") + self._name + " "
+
+		if self._attribute != null:
+			output_string += self._resolve_type(self._attribute) + " "
+
+		for child in self._children:
+			output_string += child._serialize_compact_inner(false) + " "
+
+		output_string += ")"
 
 		return output_string
 		
@@ -120,16 +155,23 @@ class LTANode:
 			var phase = stack[top].phase
 			
 			if phase == 0:
+				if node._compact:
+					for _i in range(node._depth):
+						file.store_string("\t")
+					file.store_string(node._serialize_compact_inner())
+					file.store_string("\r\n")
+					stack.pop_back()
+					continue
 				for _i in range(node._depth):
 					file.store_string("\t")
 				file.store_string("(" + node._name + " ")
 				if node._attribute != null:
 					file.store_string(node._resolve_type(node._attribute))
 				if len(node._children) == 0:
-					file.store_string(")\n")
+					file.store_string(")\r\n")
 					stack.pop_back()
 				else:
-					file.store_string("\n")
+					file.store_string("\r\n")
 					stack[top].phase = 1
 			
 			elif phase == 1:
@@ -143,7 +185,7 @@ class LTANode:
 			elif phase == 2:
 				for _i in range(node._depth):
 					file.store_string("\t")
-				file.store_string(")\n")
+				file.store_string(")\r\n")
 				stack.pop_back()
 
 	func create_vector_node(values: Vector3):
@@ -217,7 +259,7 @@ class LTANode:
 		var output_string = ""
 
 		for row in value:
-			output_string += "\n"
+			output_string += "\r\n"
 			output_string += self._write_depth()
 			output_string += "("
 			for column in row:
@@ -227,7 +269,7 @@ class LTANode:
 			output_string += " )"
 		# End For
 
-		output_string += "\n"
+		output_string += "\r\n"
 		output_string += self._write_depth()
 
 		return output_string
@@ -284,7 +326,7 @@ class LTAWriter:
 	func format_float(value):
 		return "%.6f" % float(value)
 	
-	func write(model, path, version):
+	func write(model, path, version, missing_textures = [], missing_tex_path = ""):
 		# Set the version
 		self._version = version
 
@@ -326,6 +368,7 @@ class LTAWriter:
 		var running_brush_id = 0
 		
 		var object_nodes = {}
+		var object_childlists = {}  # lazy-erstellte childlist-Container, nur bei Bedarf
 		
 		if model.world_object_data != null:
 			for world_object in model.world_object_data.world_objects:
@@ -362,14 +405,18 @@ class LTAWriter:
 					
 				var obj_node = object_children.create_child('worldnode')
 				obj_node.create_child('type', "___object")
-				obj_node.create_child('label', world_object.name) #label to update objects properly in DEdit
 				obj_node.create_child('nodeid', running_node_id)
 				obj_node.create_child('flags').create_container()
 				var node_props = obj_node.create_child('properties')
 				node_props.create_child('name', world_object.name)
 				node_props.create_child('propid', running_prop_id)
 				
-				object_nodes[label] = obj_node.create_child('childlist').create_container()
+				# Kein 'label' hier und keine leere 'childlist' - echte DEdit-
+				# Dateien haben bei type-object-Knoten weder das eine noch das
+				# andere, ausser es gibt tatsaechlich eine passende Brush (dann
+				# wird childlist unten im world_model-Loop erst bei Bedarf
+				# angelegt, nicht schon hier leer vorab).
+				object_nodes[label] = obj_node
 
 				# Prop List
 
@@ -416,7 +463,10 @@ class LTAWriter:
 			var wm_child_list = null
 			
 			if world_model.world_name in object_nodes:
-				wm_child_list = object_nodes[world_model.world_name]
+				if not (world_model.world_name in object_childlists):
+					var target_obj_node = object_nodes[world_model.world_name]
+					object_childlists[world_model.world_name] = target_obj_node.create_child('childlist').create_container()
+				wm_child_list = object_childlists[world_model.world_name]
 			else:
 				var wm_node = child_list.create_child('worldnode')
 				wm_node.create_child('type', '___null')
@@ -573,11 +623,13 @@ class LTAWriter:
 				prop_list.create_prop_entry('string', 'Name', "Brush_" + world_model.world_name + "_" + str(running_prop_id))
 
 				var pos_prop = prop_list.create_child('vector', 'Pos')
+				pos_prop._compact = true
 				pos_prop.create_container()
 				var pos_data = pos_prop.create_child('data')
 				pos_data.create_vector_node(Vector3(0.0, 0.0, 0.0))
 
 				var rot_prop = prop_list.create_child('rotation', 'Rotation')
+				rot_prop._compact = true
 				rot_prop.create_container()
 				var rot_data = rot_prop.create_child('data')
 				rot_data.create_eulerangles_node(Vector3(0.0, 0.0, 0.0))
@@ -654,9 +706,15 @@ class LTAWriter:
 		
 		print("Finished serializing node list!")
 		
-		var dtx_reader = preload("res://Addons/DTXReader/TextureBuilder.gd").new()
-		
-		var txt_path = path + "_missing_tex.txt"
+		if missing_tex_path != "" and missing_textures.size() > 0:
+			var tex_file = File.new()
+			if tex_file.open(missing_tex_path, File.WRITE) == OK:
+				for tex_name in missing_textures:
+					tex_file.store_string(tex_name + "\r\n")
+				tex_file.close()
+				print("Missing textures written to " + missing_tex_path)
+			else:
+				push_error("Failed to write missing texture list: " + missing_tex_path)
 
 		print("Finished!")
 		
