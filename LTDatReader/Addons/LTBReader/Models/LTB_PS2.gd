@@ -407,7 +407,12 @@ func _process_skeletal_weights(file: File, lod: MeshLod, vertex_count: int, node
 	
 	#print("Node map: ", node_map)
 	
-	# Read and process vertex weights
+	# Read and process vertex weights, sammle sie erst komplett pro Position
+	# (wie die Blender-Referenz: mehrere Vertices an derselben Position -
+	# z.B. an UV-Naehten - brauchen JEWEILS eine eigene Gewichtszuordnung,
+	# nicht alle dieselbe / nicht nur die erste gefundene).
+	var position_to_weights = {}
+	
 	for i in range(vertex_count):
 		var weights = []
 		for j in range(4):
@@ -434,17 +439,22 @@ func _process_skeletal_weights(file: File, lod: MeshLod, vertex_count: int, node
 			weight.node_index = node_map[weight.node_index]
 			processed_weights.append(weight)
 		
-		# Match weights to vertices by position
 		var ordered_vertex = ordered_vertices[i]
-		
-		for vi in range(lod.vertices.size()):
-			var vertex = lod.vertices[vi]
-			
-			if ordered_vertex.location.is_equal_approx(vertex.location):
-				lod.vertices[vi].weights = processed_weights.duplicate()
-				for weight in lod.vertices[vi].weights:
-					weight.location = ordered_vertex.location
-				break
+		var key = "%.4f,%.4f,%.4f" % [ordered_vertex.location.x, ordered_vertex.location.y, ordered_vertex.location.z]
+		if not position_to_weights.has(key):
+			position_to_weights[key] = []
+		position_to_weights[key].append(processed_weights)
+	
+	# Jetzt jedem lod.vertex sein EIGENES Gewicht zuweisen (Warteschlange pro
+	# Position, statt beim ersten Treffer aufzuhoeren).
+	for vi in range(lod.vertices.size()):
+		var vertex = lod.vertices[vi]
+		var key = "%.4f,%.4f,%.4f" % [vertex.location.x, vertex.location.y, vertex.location.z]
+		if position_to_weights.has(key) and position_to_weights[key].size() > 0:
+			var w = position_to_weights[key].pop_front()
+			lod.vertices[vi].weights = w.duplicate()
+			for weight in lod.vertices[vi].weights:
+				weight.location = vertex.location
 
 func _read_node(file: File) -> LTNode:
 	var node = LTNode.new()
