@@ -33,10 +33,10 @@ func build(source_file, options):
 	self.model = model	
 	file.close()
 	
-	print("LTB model loaded successfully: ", model.name)
-	print("Pieces: ", model.pieces.size())
-	print("Nodes: ", model.nodes.size())
-	print("LOD Count: ", model.lod_count)
+	# print("LTB model loaded successfully: ", model.name)
+	# print("Pieces: ", model.pieces.size())
+	# print("Nodes: ", model.nodes.size())
+	# print("LOD Count: ", model.lod_count)
 		
 	# Setup our new scene
 	var scene = PackedScene.new()
@@ -88,6 +88,10 @@ func build(source_file, options):
 		# Create material with DTX texture
 		var material = SpatialMaterial.new()
 		material.flags_unshaded = false
+		# TEMPORAER zum Debuggen: Backface-Culling aus, um zu pruefen, ob das
+		# "Loch" von invertierter Dreiecks-Wicklung kommt. Wieder entfernen,
+		# sobald geklaert.
+		material.params_cull_mode = SpatialMaterial.CULL_DISABLED
 		
 		# Texture-Path für jedes Piece einzeln berechnen
 		var texture_path = get_dtx_path(source_file, piece.material_index)
@@ -167,12 +171,12 @@ func fill_array_mesh(model, skeleton):
 	var st = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	
-	print("=== MESH CREATION DEBUG ===")
-	print("Creating meshes for ", model.pieces.size(), " pieces")
+	#print("=== MESH CREATION DEBUG ===")
+	#print("Creating meshes for ", model.pieces.size(), " pieces")
 
 	for piece_index in range(model.pieces.size()):
 		var piece = model.pieces[piece_index]
-		print("Processing piece ", piece_index, ": ", piece.name)
+		#print("Processing piece ", piece_index, ": ", piece.name)
 		
 		var verts = PoolVector3Array()
 		var uvs = PoolVector2Array()
@@ -249,8 +253,8 @@ func fill_array_mesh(model, skeleton):
 			if not is_rigid:
 				st.add_bones(this_vert_bones)
 				st.add_weights(this_vert_weights)
-			if i == 0:
-				print("First vertex: ", verts[index], " is_rigid: ", is_rigid)
+			#if i == 0:
+				#print("First vertex: ", verts[index], " is_rigid: ", is_rigid)
 
 			st.add_vertex(verts[index])
 			i += 1

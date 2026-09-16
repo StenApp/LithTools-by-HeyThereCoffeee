@@ -120,8 +120,8 @@ func read(file: File):
 	print("Found ", piece_info_count, " pieces in PieceInfo")
 	
 	for piece_index in range(piece_info_count):
-		print("------------------------------------")
-		print("Processing Piece ", piece_index)
+		#print("------------------------------------")
+		#print("Processing Piece ", piece_index)
 		
 		var piece = _read_piece(file, piece_index, hash_magic_number)
 		pieces.append(piece)
@@ -172,7 +172,7 @@ func _read_piece(file: File, piece_index: int, hash_magic: int) -> Piece:
 	
 	# Process LODs (but we only need LOD 0)
 	for lod_index in range(lod_count):
-		print("Processing LOD ", lod_index, " for Piece ", piece_index)
+		#print("Processing LOD ", lod_index, " for Piece ", piece_index)
 		
 		var lod = _read_lod(file, lod_index)
 		piece.lods.append(lod)
@@ -190,13 +190,13 @@ func _read_lod(file: File, lod_index: int) -> MeshLod:
 	var mesh_type = file.get_32()
 	lod.mesh_type = mesh_type
 	
-	print("LOD ", lod_index, " Mesh Type: ", mesh_type)
-	if mesh_type == MT_RIGID:
-		print("Rigid Mesh")
-	elif mesh_type == MT_SKELETAL:
-		print("Skeletal Mesh")
-	elif mesh_type == MT_VERTEX_ANIMATED:
-		print("Vertex Animated Mesh")
+	# print("LOD ", lod_index, " Mesh Type: ", mesh_type)
+	# if mesh_type == MT_RIGID:
+		# print("Rigid Mesh")
+	# elif mesh_type == MT_SKELETAL:
+		# print("Skeletal Mesh")
+	# elif mesh_type == MT_VERTEX_ANIMATED:
+		# print("Vertex Animated Mesh")
 	
 	var vertex_list = VertexList.new()
 	var mesh_set_index = 1
@@ -207,14 +207,14 @@ func _read_lod(file: File, lod_index: int) -> MeshLod:
 	if mesh_type == MT_SKELETAL:
 		var skel_unk = file.get_32()
 		lod_skeletal_unk_sector_count = file.get_32()
-		print("Skeletal mesh with UnknownSectorSize: ", lod_skeletal_unk_sector_count)
+		#print("Skeletal mesh with UnknownSectorSize: ", lod_skeletal_unk_sector_count)
 	
 	# Read geometry batch header
 	var lod_vertex_count = file.get_32()
 	var lod_node_binding = file.get_32()
 	lod.node_binding = lod_node_binding
 	
-	print("Geometry batch: ", lod_vertex_count, " vertices, ", lod_node_binding, " target node index/bone count")
+	#print("Geometry batch: ", lod_vertex_count, " vertices, ", lod_node_binding, " target node index/bone count")
 	
 	# Process batch data
 	var finished_lods = false
@@ -234,11 +234,11 @@ func _read_lod(file: File, lod_index: int) -> MeshLod:
 			file.seek(peek_pos)
 			
 			if vif_constant != VIF_DIRECT or vif_code != VIF_UNPACK:
-				print("No more data found!")
+				#print("No more data found!")
 				finished_lods = true
 				break
 			
-			print("Found additional batch!")
+			#print("Found additional batch!")
 			check_for_more_data = false
 		
 		# Read batch connector
@@ -309,7 +309,7 @@ func _read_lod(file: File, lod_index: int) -> MeshLod:
 			running_mesh_set_count += 1
 			
 			if unknown_flag == 128:
-				print("Found last mesh set (flag 128)")
+				#print("Found last mesh set (flag 128)")
 				break
 		
 		# Skip to end command
@@ -318,10 +318,10 @@ func _read_lod(file: File, lod_index: int) -> MeshLod:
 			end_command_peek.append(file.get_32())
 		
 		if end_command_peek[0] == 0 and end_command_peek[1] == 0 and end_command_peek[2] == 0 and end_command_peek[3] == VIF_MSCALF:
-			print("Found End Command")
+			#print("Found End Command")
 			file.seek(file.get_position() - 4 * 4)
-		else:
-			print("Skipping extra data before end command")
+		#else:
+			#print("Skipping extra data before end command")
 		
 		# Read end command (skip 12 bytes, read int)
 		file.seek(file.get_position() + 12)
@@ -329,7 +329,7 @@ func _read_lod(file: File, lod_index: int) -> MeshLod:
 		
 		var size_end = file.get_position()
 		var batch_size = size_end - size_start
-		print("Batch size: ", batch_size, " bytes")
+		#print("Batch size: ", batch_size, " bytes")
 		
 		# Check for more batches
 		var peek_pos = file.get_position()
@@ -342,10 +342,10 @@ func _read_lod(file: File, lod_index: int) -> MeshLod:
 		file.seek(peek_pos)
 		
 		if vif_constant == VIF_DIRECT and vif_code == VIF_UNPACK:
-			print("Found another batch")
+			#print("Found another batch")
 			check_for_more_data = true
 		else:
-			print("No more batches found")
+			#print("No more batches found")
 			finished_lods = true
 	
 	# Finalize LOD data
@@ -357,8 +357,8 @@ func _read_lod(file: File, lod_index: int) -> MeshLod:
 	if mesh_type == MT_SKELETAL:
 		_process_skeletal_weights(file, lod, lod_vertex_count, lod_node_binding, lod_skeletal_unk_sector_count)
 	
-	print("LOD ", lod_index, " Final vertices: ", lod.vertices.size())
-	print("LOD ", lod_index, " Final faces: ", lod.faces.size())
+	#print("LOD ", lod_index, " Final vertices: ", lod.vertices.size())
+	#print("LOD ", lod_index, " Final faces: ", lod.faces.size())
 	
 	return lod
 
@@ -388,7 +388,7 @@ func _process_skeletal_weights(file: File, lod: MeshLod, vertex_count: int, node
 	
 	# Read ordered vertices
 	var ordered_vertices = []
-	print("Reading ", vertex_count, " ordered vertices")
+	#print("Reading ", vertex_count, " ordered vertices")
 	
 	for i in range(vertex_count):
 		var ordered_vertex = OrderedVertex.new()
@@ -400,12 +400,12 @@ func _process_skeletal_weights(file: File, lod: MeshLod, vertex_count: int, node
 	
 	# Read node map
 	var node_map = []
-	print("Reading ", node_binding, " node map entries")
+	#print("Reading ", node_binding, " node map entries")
 	
 	for i in range(node_binding):
 		node_map.append(file.get_32())
 	
-	print("Node map: ", node_map)
+	#print("Node map: ", node_map)
 	
 	# Read and process vertex weights
 	for i in range(vertex_count):
