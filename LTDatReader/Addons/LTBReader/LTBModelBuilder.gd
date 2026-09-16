@@ -110,12 +110,11 @@ func build(source_file, options):
 			
 		
 		mesh_instance.material_override = material
-		if is_rigid:
-			root.add_child(mesh_instance)
-			mesh_instance.owner = root
-		else:
-			skeleton.add_child(mesh_instance)
-			mesh_instance.owner = root
+		# Rigid-Pieces sind jetzt (wie Skeletal) mit vollem Gewicht auf ihren
+		# Zielknochen gebunden - gehoeren deshalb genauso an den Skeleton,
+		# damit sie der Animation folgen, statt starr am Root zu haengen.
+		skeleton.add_child(mesh_instance)
+		mesh_instance.owner = root
 		
 		#print("Skeleton bone count: ", skeleton.get_bone_count())
 		#print("mesh_instance parent: ", mesh_instance.get_parent().name)
@@ -201,15 +200,40 @@ func fill_array_mesh(model, skeleton):
 		
 		#print("  LOD 0 - Vertices: ", primary_lod.vertices.size(), " Faces: ", primary_lod.faces.size())
 		
+		# Rigid-Mesh-Anbindung: node_binding ist hier KEIN Bone-Count wie bei
+		# Skeletal-Meshes, sondern der Index des EINEN Zielknochens, an den
+		# das ganze Stueck starr gebunden ist (siehe Blender-Referenz,
+		# _position_rigid_mesh). Alle Vertices werden mit dessen Bind-Matrix
+		# transformiert und bekommen volles Gewicht (1.0) auf genau diesen
+		# einen Knochen, damit sie im Skeleton-System der Animation folgen.
+		var rigid_target_node_index = -1
+		var rigid_bind_matrix = Transform.IDENTITY
+		if is_rigid:
+			rigid_target_node_index = primary_lod.node_binding
+			if rigid_target_node_index >= 0 and rigid_target_node_index < model.nodes.size():
+				rigid_bind_matrix = model.nodes[rigid_target_node_index].bind_matrix
+			else:
+				print("Warnung: Rigid-Mesh-Zielknoten ", rigid_target_node_index, " ausserhalb des gueltigen Bereichs (", model.nodes.size(), " Knoten) - Piece ", piece.name)
+				rigid_target_node_index = -1
+		
 		# Process vertices
 		for vertex in primary_lod.vertices:
-			verts.append(vertex.location)
-			normals.append(vertex.normal)
-			vert_weight_count.append(vertex.weights.size())
-			var vertex_bone_data = []
-			for weight in vertex.weights:
-				vertex_bone_data.append([weight.node_index, weight.bias])
-			piece_bone_data.append(vertex_bone_data)
+			if is_rigid and rigid_target_node_index >= 0:
+				verts.append(rigid_bind_matrix.xform(vertex.location))
+				normals.append(rigid_bind_matrix.basis.xform(vertex.normal).normalized())
+			else:
+				verts.append(vertex.location)
+				normals.append(vertex.normal)
+			
+			if is_rigid and rigid_target_node_index >= 0:
+				vert_weight_count.append(1)
+				piece_bone_data.append([[rigid_target_node_index, 1.0]])
+			else:
+				vert_weight_count.append(vertex.weights.size())
+				var vertex_bone_data = []
+				for weight in vertex.weights:
+					vertex_bone_data.append([weight.node_index, weight.bias])
+				piece_bone_data.append(vertex_bone_data)
 		
 		# Process faces
 		for face in primary_lod.faces:
@@ -250,9 +274,8 @@ func fill_array_mesh(model, skeleton):
 					this_vert_bones.append(0)
 					this_vert_weights.append(0.0)
 			
-			if not is_rigid:
-				st.add_bones(this_vert_bones)
-				st.add_weights(this_vert_weights)
+			st.add_bones(this_vert_bones)
+			st.add_weights(this_vert_weights)
 			#if i == 0:
 				#print("First vertex: ", verts[index], " is_rigid: ", is_rigid)
 
