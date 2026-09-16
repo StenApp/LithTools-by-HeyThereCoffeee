@@ -405,6 +405,7 @@ class LTNode:
 	var name = ""
 	var index = 0
 	var bind_matrix = Transform()
+	var parent = null  # weakref(), um Referenzzyklus mit children zu vermeiden
 	var children = []
 	
 	func read(ltb, f: File, depth: int) -> bool:
@@ -434,6 +435,7 @@ class LTNode:
 			var child = LTNode.new()
 			if not child.read(ltb, f, depth + 1):
 				return false
+			child.parent = weakref(self)
 			children.append(child)
 		
 		return true

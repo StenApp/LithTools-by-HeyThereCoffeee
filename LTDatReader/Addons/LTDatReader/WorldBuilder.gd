@@ -703,12 +703,6 @@ func fill_array_mesh(model, world_models = []):
 					Q = poly.Q
 				calculation_method = "pc_simple"
 				
-				if "invisible" in texture_name:
-					print("OPQDUMP PC normal=(%.4f,%.4f,%.4f) dist=%.4f O=(%.4f,%.4f,%.4f) P=(%.4f,%.4f,%.4f) Q=(%.4f,%.4f,%.4f)" % [
-						plane.normal.x, plane.normal.y, plane.normal.z, plane.dist,
-						O.x, O.y, O.z, P.x, P.y, P.z, Q.x, Q.y, Q.z
-					])
-				
 			# Process each vertex
 			for disk_vert_index in range(len(poly.disk_verts)):
 				var disk_vert = poly.disk_verts[disk_vert_index]

@@ -345,7 +345,7 @@ func build_skeleton(model, skeleton : Skeleton):
 		var lt_node = model.nodes[i]
 		
 		if lt_node.parent != null:
-			skeleton.set_bone_parent(i, lt_node.parent.index)
+			skeleton.set_bone_parent(i, lt_node.parent.get_ref().index)
 		
 		if model.version == 6:
 			if not model.has_meta("_rest_anim_cached"):
@@ -369,7 +369,7 @@ func build_skeleton(model, skeleton : Skeleton):
 			# ABC v9-13: bind_matrix relativ zum Parent setzen (original).
 			var bind_matrix = lt_node.bind_matrix
 			if lt_node.parent != null:
-				bind_matrix = lt_node.parent.bind_matrix.inverse() * bind_matrix
+				bind_matrix = lt_node.parent.get_ref().bind_matrix.inverse() * bind_matrix
 			skeleton.set_bone_rest(i, bind_matrix)
 	# End For
 	

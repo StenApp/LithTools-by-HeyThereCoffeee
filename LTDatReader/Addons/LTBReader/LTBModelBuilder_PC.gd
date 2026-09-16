@@ -78,7 +78,8 @@ func _create_skeleton(ltb_pc) -> Skeleton:
 		
 		# Link parent
 		if node.parent:
-			var parent_idx = ltb_pc.nodes.find(node.parent)
+			var parent_node = node.parent.get_ref()
+			var parent_idx = ltb_pc.nodes.find(parent_node)
 			if parent_idx >= 0:
 				skeleton.set_bone_parent(bone_idx, parent_idx)
 	

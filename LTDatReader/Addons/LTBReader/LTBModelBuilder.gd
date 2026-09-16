@@ -277,8 +277,9 @@ func build_skeleton(model, skeleton: Skeleton):
 		skeleton.add_bone(lt_node.name)
 
 		if lt_node.parent != null:
-			skeleton.set_bone_parent(i, lt_node.parent.index)
-			bind_matrix = lt_node.parent.bind_matrix.inverse() * bind_matrix
+			var lt_parent = lt_node.parent.get_ref()
+			skeleton.set_bone_parent(i, lt_parent.index)
+			bind_matrix = lt_parent.bind_matrix.inverse() * bind_matrix
 		
 		skeleton.set_bone_rest(i, bind_matrix)
 	

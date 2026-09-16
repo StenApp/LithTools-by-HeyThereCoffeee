@@ -285,6 +285,7 @@ class ABC:
 		var child_count = 0
 		
 		# Links
+		var parent = null  # weakref(), um Referenzzyklus mit children zu vermeiden
 		var children = []
 		
 		func read(abc : ABC, f : File):
@@ -302,6 +303,7 @@ class ABC:
 			var node = node_list[node_index]
 			
 			if (parent != null):
+				node.parent = weakref(parent)
 				parent.children.append(node)
 			
 			for _i in range(node.child_count):
