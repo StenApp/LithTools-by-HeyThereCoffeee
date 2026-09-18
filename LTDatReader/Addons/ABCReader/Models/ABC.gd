@@ -40,8 +40,17 @@ class ABC:
 	
 	enum IMPORT_RETURN{SUCCESS, ERROR}
 	
-	func read(f : File):
-		var next_section_offset = 0
+	func read(f : File, start_offset : int = 0):
+		# start_offset: normale, eigenstaendige .abc-Dateien starten den
+		# Section-Scan bei Byte 0 ("Header" ist die erste Section). Die
+		# Die-Hard:-Nakatomi-Plaza-Sondervariante von LTB wickelt einen
+		# sonst identischen ABC-Body in einen aeusseren LTB-Container ein
+		# (LTBHeader-String + LTB_Header); LTBImporter.gd/DHNPWrapper.gd
+		# uebergeben hier die Groesse dieses Wrappers, damit dieselbe
+		# Section-Scan-Schleife unveraendert fuer beide Faelle funktioniert
+		# (siehe io_scene_lithtech's reader_abc_pc.py fuer denselben Trick
+		# auf der Blender-Seite).
+		var next_section_offset = start_offset
 		while next_section_offset != -1:
 			f.seek(next_section_offset)
 			

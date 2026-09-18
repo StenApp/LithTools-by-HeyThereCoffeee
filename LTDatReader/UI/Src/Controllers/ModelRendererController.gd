@@ -5,7 +5,10 @@ export  var single_thread_loading = false
 var loaded_file: LoadedFile
 
 var _model_builder = preload("res://Addons/ABCReader/ModelBuilder.gd").new()
-var _world_builder = preload("res://Addons/LTDatReader/WorldBuilder.gd").new()
+# Nicht mehr WorldBuilder.gd direkt: die Entscheidung "Level oder Modell (PC/
+# PS2/DHNP)" steckt jetzt in ModelFormatDispatcher.gd, WorldBuilder baut nur
+# noch bereits identifizierte Level-Dateien.
+var _format_dispatcher = preload("res://Addons/LTDatReader/ModelFormatDispatcher.gd").new()
 var _texture_builder = preload("res://Addons/DTXReader/TextureBuilder.gd").new()
 var loading_screen = null
 var global_controller = null
@@ -87,10 +90,10 @@ func _threaded_load(path):
 		
 	var scene = null
 	if ".dat" in path.to_lower() or ".ltb" in path.to_lower():
-		scene = self._world_builder.build(path, [])
+		scene = self._format_dispatcher.build(path, [])
 		raw_file = scene
-		var btype = self._world_builder.last_build_type
-		if btype == "model_ps2" or btype == "model_pc":
+		var btype = self._format_dispatcher.last_build_type
+		if btype == "model_ps2" or btype == "model_pc" or btype == "model_dhnp":
 			file_mode = LoadedFile.FILE_ABC
 	elif ".abc" in path.to_lower():
 		scene = self._model_builder.build(path, [])
@@ -272,7 +275,7 @@ func auto_frame_camera(model_root):
 		trackball.clear_current(false)	
 
 func on_export_lta_changed(file_menu_model):
-	self._world_builder.export_to_lta = file_menu_model.export_to_lta_on_load
+	self._format_dispatcher.export_to_lta = file_menu_model.export_to_lta_on_load
 
 func _exit_tree():
 	if loading_thread.is_active():

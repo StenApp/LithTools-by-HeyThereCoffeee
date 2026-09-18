@@ -11,7 +11,11 @@ const LightmapAtlas = preload("res://Addons/LTDatReader/LightmapAtlas.gd")
 const LT1_SHADER = preload("res://Addons/LTDatReader/Shaders/LT1.shader")
 var texture_path = ""
 var debug_file = null
-var last_build_type = "level"  # "level", "model_ps2", "model_pc"
+
+# Immer "level" -- WorldBuilder baut nur noch Level-Szenen. Die Werte
+# "model_ps2"/"model_pc"/"model_dhnp" existieren jetzt nur noch auf
+# ModelFormatDispatcher.gd.last_build_type, nicht mehr hier.
+var last_build_type = "level"
 
 const LIGHTMAP_ATLAS_SIZE = 2048.0#4096.0#2048.0
 const ENABLE_LT2_LIGHTMAPS = false
@@ -70,51 +74,23 @@ func build(source_file, options):
 	
 	var model = null
 	var file_extension = "dat"
-	
+
+	# WorldBuilder baut ausschliesslich echte Level-Szenen (DAT oder
+	# PS2-Level-LTB). Die Entscheidung "ist diese Datei ueberhaupt ein Level,
+	# oder tatsaechlich ein Model-LTB (PC/PS2) bzw. ein DHNP-gewrapptes Modell"
+	# ist NICHT mehr Aufgabe von WorldBuilder -- das entscheidet jetzt
+	# ausschliesslich ModelFormatDispatcher.gd, der als einziger vorgesehener
+	# Aufrufer diese Funktion nur noch fuer bereits identifizierte
+	# Level-Dateien aufruft. Ein direkter Aufruf mit einer .ltb-Datei, die
+	# KEIN Level ist, wird hier nicht mehr abgefangen -- das ist bewusst so,
+	# siehe ModelFormatDispatcher.gd fuer die eigentliche Unterscheidung.
 	if ".ltb" in source_file.to_lower():
-		# Peek first 4 bytes
-		var first32 = file.get_32()
-		file.seek(0)
-
-		# Level-LTB erkennt man daran, dass diese 4 Bytes bereits 66 oder 4694 ergeben
-		if first32 == 66 or first32 == 4694:
-			print("Level-LTB (PS2) detected - processing with LTDatReader")
-			self.last_build_type = "level"
-			model = ltb_file.LTB_PS2.new()
-			file_extension = "ltb"
-
-		else:
-			# Model-LTB: Lese als 32-bit + 16-bit (funktioniert für PC und PS2!)
-			file.seek(0)  # Zurück zum Anfang
-			var file_type = file.get_32()  # 4 Bytes: 0x00000001 (PC) oder 0x00000002 (PS2)
-			var version = file.get_16()    # 2 Bytes: Version
-			
-			print("LTB Model - FileType: ", file_type, " Version: ", version)
-			
-			if file_type == 589825 and version == 0:
-				# PC D3D Model (NOLF2)
-				print("Loading PC LTB Model (v9)")
-				file.close()
-				self.last_build_type = "model_pc"
-				var ltb_pc_builder = preload("res://Addons/LTBReader/LTBModelBuilder_PC.gd").new()
-				return ltb_pc_builder.build(source_file, options)
-			
-			elif file_type == 2 and version == 16:
-				# PS2 Model
-				print("Loading PS2 LTB Model (v16)")
-				file.close()
-				self.last_build_type = "model_ps2"
-				var ltb_ps2_builder = preload("res://Addons/LTBReader/LTBModelBuilder.gd").new()
-				return ltb_ps2_builder.build(source_file, options)
-			
-			else:
-				print("Unknown LTB Model format - FileType: ", file_type, " Version: ", version)
-				file.close()
-				root.free()  # Leak-Fix: root existiert bereits, sonst als Node nie freigegeben
-				return FAILED
+		self.last_build_type = "level"
+		model = ltb_file.LTB_PS2.new()
+		file_extension = "ltb"
 	else:
 		self.last_build_type = "level"
-		model = dat_file.DAT.new()	
+		model = dat_file.DAT.new()
 		
 	# Batched reading
 	#var response = model.read(file, true)

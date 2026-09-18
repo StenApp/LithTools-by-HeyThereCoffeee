@@ -8,30 +8,38 @@ var cheat_skeleton = null  # lazy statt eager Skeleton.new() - siehe Fix bei der
 
 var model = null
 
-func build(source_file, options):
+func build(source_file, options, start_offset : int = 0):
+	# start_offset != 0 heisst: wir werden ueber den DHNP-LTB-Wrapper
+	# gerufen (LTBImporter.gd/DHNPWrapper.gd), der Body ist also
+	# schon als "modernes" ABC (v9-13) identifiziert -> kein ABC6-
+	# Fallback-Versuch noetig/sinnvoll, da v6 nie in DHNP vorkommt.
 	var file = File.new()
 	if file.open(source_file, File.READ) != OK:
 		print("Failed to open " + source_file)
 		return FAILED
-		
+
 	print("Opened " + source_file)
-	
+
 	var path = self.get_script().get_path().get_base_dir() + "/Models"
 	var abc_file = load(path + "/ABC.gd")
 	var abc6_file = load(path + "/ABC6.gd")
-	
+
 	# Our helper script
 	var abc_helper_script = load(self.get_script().get_path().get_base_dir() + "/ABCHelper.gd")
-	
+
 	var model = abc_file.ABC.new()
-	
-	var response = model.read(file)
+
+	var response = model.read(file, start_offset)
 	if response.code == model.IMPORT_RETURN.ERROR:
+		if start_offset != 0:
+			file.close()
+			print("IMPORT ERROR (DHNP ABC-Body): " + str(response.message))
+			return FAILED
 		print("Checking ABC version 6 reader!")
 		# Try ABC 6
 		model = abc6_file.ABC.new()
 		response = model.read(file)
-		
+
 		#...nope, we're ded.
 		if response.code == model.IMPORT_RETURN.ERROR:
 			file.close()
