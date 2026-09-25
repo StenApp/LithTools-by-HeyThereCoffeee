@@ -39,6 +39,10 @@ var child_models = []
 var animations = []
 var sockets = []
 var anim_bindings = []
+# Pro echtem ChildModel (child_models[1:]) ein Extra-Block AnimBinding,
+# der nach der Haupt-AnimBindings-Section ohne eigenen Section-Marker
+# folgt -- siehe Kommentar in read() bei 'AnimBindings'.
+var child_model_anim_bindings = []
 var command_string = ""
 var internal_radius = 0.0
 var lod_distances = []
@@ -131,6 +135,28 @@ func read(f: File, start_offset: int = 0) -> Dictionary:
 				var anim_binding = AnimBinding.new()
 				anim_binding.read(self, f)
 				self.anim_bindings.append(anim_binding)
+			# End For
+
+			# BESTAETIGT (2026-09, Sten/Claude, gegen ALEXANDER.LTB v13
+			# DHNP-D3D, ChildModelCount=4/3 echte, 1:1 uebertragen aus
+			# reader_ltb_dhnp.py): nach der internen AnimBindings-Section
+			# folgt -- ohne eigenen Section-Marker -- pro ECHTEM ChildModel
+			# (Index >=1; Index 0 ist der leere Platzhalter) noch ein
+			# weiterer Block im gleichen Format (uint32 Count +
+			# Count*AnimBinding). Bytegenau verifiziert: ALEXANDER.LTB hatte
+			# vorher 12 ungelesene Byte bis EOF -- exakt 3 Blocks mit je
+			# Count=0.
+			self.child_model_anim_bindings = []
+			var extra_count = max(self.child_models.size() - 1, 0)
+			for i in range(extra_count):
+				var cm_binding_count = f.get_32()
+				var cm_bindings = []
+				for j in range(cm_binding_count):
+					var b = AnimBinding.new()
+					b.read(self, f)
+					cm_bindings.append(b)
+				# End For
+				self.child_model_anim_bindings.append(cm_bindings)
 			# End For
 		else:
 			break
@@ -485,6 +511,12 @@ class WeightSet:
 # End WeightSet
 
 
+	# BESTAETIGT (2026-09, Sten/Claude, gegen reader_ltb_dhnp.py): zwei
+	# verschiedene Structs -- plain "Transform" (Location+Rotation, KEIN
+	# Extra-Feld) fuer ChildModel.Transforms, "AnimTransform" (zusaetzlich
+	# zwei unbekannte Floats bei v13) NUR fuer Animation-Keyframe-
+	# Transforms. read() macht jetzt nur noch das plain Transform; der
+	# v13-Skip ist in read_anim() gewandert, dem einzigen anderen Aufrufer.
 class LTTransform:
 	var location = Vector3()
 	var rotation = Quat()
@@ -492,8 +524,11 @@ class LTTransform:
 	func read(dhnp, f: File):
 		self.location = dhnp.read_vector3(f)
 		self.rotation = dhnp.read_quat(f)
+
+	func read_anim(dhnp, f: File):
+		self.read(dhnp, f)
 		if dhnp.version >= 13:
-			f.seek(f.get_position() + 8)  # zwei unbekannte Floats (nur v13)
+			f.seek(f.get_position() + 8)  # zwei unbekannte Floats (nur v13, nur AnimTransform)
 # End LTTransform
 
 
@@ -533,12 +568,22 @@ class LTAnim:
 	func read(dhnp, f: File):
 		self.extents = dhnp.read_vector3(f)
 		self.name = dhnp.read_string(f)
-		f.get_32()  # unknown1, ungenutzt
+		var val = f.get_32()  # "Val" per ABC_V9-134.bt / reader_ltb_dhnp.py
 
-		if dhnp.version >= 12:
-			self.interpolation_time = f.get_32()
+		# BESTAETIGT (2026-09, Sten/Claude): Val ist ein echter
+		# Discriminator, kein konstantes -1-Feld. Nur wenn Val==-1 folgt
+		# die echte KeyFrameCount (bei v12/v13 mit einem UnkInt davor);
+		# sonst IST Val selbst die KeyFrameCount und es folgt nichts
+		# weiter.
+		if val == -1:
+			if dhnp.version >= 12:
+				self.interpolation_time = f.get_32()
+			self.keyframe_count = f.get_32()
+		else:
+			self.interpolation_time = 200
+			self.keyframe_count = val
+		# End If
 
-		self.keyframe_count = f.get_32()
 		for i in range(self.keyframe_count):
 			var kf = LTKeyframe.new()
 			kf.read(dhnp, f)
@@ -552,7 +597,7 @@ class LTAnim:
 			var per_node_transforms = []
 			for j in range(self.keyframe_count):
 				var t = LTTransform.new()
-				t.read(dhnp, f)
+				t.read_anim(dhnp, f)
 				per_node_transforms.append(t)
 			# End For
 			self.node_keyframes.append(per_node_transforms)

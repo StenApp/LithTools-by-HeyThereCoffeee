@@ -42,6 +42,7 @@ var animations = []
 var sockets = []
 var child_models = []
 var weight_sets = []
+var anim_bindings = []
 
 # Internal counters
 var _socket_counter = 0
@@ -509,26 +510,39 @@ func _read_animations(file: File, offset: int, count: int, hash_magic: int):
 		var animation = LTAnimation.new()
 		animation.name = "Animation_" + str(_animations_processed)
 		animation.extents = read_vector3(file)
-		
-		var unknown_vector = read_vector3(file)
+
+		# "Translation" -- vorher gelesen und komplett verworfen
+		# (var unknown_vector, nie benutzt). Bestaetigt gegen reader_ltb_ps2.py:
+		# PS2 hat keine eigene AnimBindings-Section wie PC/DHNP-D3D/ABC;
+		# Extents+Translation stecken dafuer inline hier in jedem Animation-
+		# Eintrag. Jetzt behalten (LTAnimation.origin) UND zusaetzlich als
+		# AnimBinding synthetisiert, damit dieselbe Datenform wie bei den
+		# anderen drei Formaten zur Verfuegung steht.
+		animation.origin = read_vector3(file)
 		var hashed_string = file.get_32()
 		animation.interpolation_time = file.get_32()
 		animation.keyframe_count = file.get_32()
-		
+
 		# Read keyframes (simplified)
 		for j in range(animation.keyframe_count):
 			var keyframe = LTKeyframe.new()
 			keyframe.time = file.get_32()
 			keyframe.command_string = read_string(file)
 			animation.keyframes.append(keyframe)
-		
+
 		# Skip node keyframe transforms for now
 		for k in range(node_count):
 			var start_marker = file.get_32()
 			for l in range(animation.keyframe_count):
 				_read_transform(file)
-		
+
 		animations.append(animation)
+
+		var binding = AnimBinding.new()
+		binding.name = animation.name
+		binding.extents = animation.extents
+		binding.origin = animation.origin
+		anim_bindings.append(binding)
 		_animations_processed += 1
 
 func _read_sockets(file: File, offset: int, count: int, hash_magic: int):
@@ -760,9 +774,27 @@ class LTTransform:
 class ChildModel:
 	var name = ""
 
+# PS2 hat KEINE eigene AnimBindings-Section (weder die "Haupt"- noch die
+# ChildModel-Erweiterung, die ABC PC/DHNP-D3D/plain LTB PC haben) --
+# bestaetigt gegen das user-seitige .bt-Template: die Parsierung endet dort
+# exakt nach Sockets. Extents+Translation stecken statt dessen direkt inline
+# in jedem Animation-Eintrag (siehe LTAnimation.origin). Dieses Struct und
+# das anim_bindings-Array unten dienen nur dazu, dieselbe Datenform wie bei
+# den anderen drei Formaten anzubieten -- synthetisiert aus den Animation-
+# Eintraegen, nicht separat aus dem File gelesen.
+class AnimBinding:
+	var name = ""
+	var extents = Vector3()
+	var origin = Vector3()
+
 class LTAnimation:
 	var name = ""
 	var extents = Vector3()
+	# "Translation" per pc_ltb.bt / reader_ltb_ps2.py's AnimBinding-Origin --
+	# steht bei PS2 (anders als PC/DHNP-D3D/ABC) inline in jedem Animation-
+	# Eintrag statt in einer separaten AnimBindings-Section. Wurde hier
+	# vorher gelesen und komplett verworfen (siehe _read_animations()).
+	var origin = Vector3()
 	var interpolation_time = 0
 	var keyframe_count = 0
 	var keyframes = []

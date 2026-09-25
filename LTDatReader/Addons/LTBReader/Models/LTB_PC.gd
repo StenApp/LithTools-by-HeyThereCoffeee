@@ -109,14 +109,35 @@ func read(f: File):
 		pieces.append(piece)
 	
 	# Read nodes with protection
+	#
+	# BESTAETIGT (2026-09, Sten/Claude, gegen reader_ltb_pc.py, byte-exakt
+	# an PLAYER_ACTION.LTB/PLAYERBASE.LTB/DEATHBASE.LTB/HERO_ACTION.LTB
+	# verifiziert): Nodes stehen im File als FLACHE Liste von genau
+	# node_count Eintraegen -- die Baumstruktur (wer ist wessen Kind) ist
+	# NICHT im Byte-Layout kodiert, sondern wird erst nachtraeglich aus der
+	# Reihenfolge + ChildCount rekonstruiert (Tiefensuche ueber die flache
+	# Liste, wie ABC.gd's LTNode.link_children es schon richtig macht).
+	# Vorher wurde hier ein SELBST-REKURSIVES Node-Struct gelesen (ein
+	# Aufruf "root_node.read(...)", das reihum "child_count" weitere Nodes
+	# direkt aus dem File nachliest) -- funktioniert nur, wenn die Datei
+	# genau EINEN Wurzelknoten hat, dessen Kinder-Baum die GESAMTE Liste
+	# deckt; bei mehreren Wurzelknoten oder einer abweichenden Tiefe wuerde
+	# das zu wenige/zu viele Bytes konsumieren und alles Folgende (Weight-
+	# Sets, ChildModels, Animationen, ...) verschieben. Gleiche Ursache,
+	# die vermutlich fuer den "Template passed end of file"-Fehler im
+	# pc_ltb.bt-Template verantwortlich war -- dort aus demselben Grund auf
+	# ein flaches Array umgestellt.
 	print("Reading node hierarchy...")
 	if node_count > 0:
-		var root_node = LTNode.new()
-		var result = root_node.read(self, f, 0)  # Pass recursion depth
-		if not result:
-			return _make_response(IMPORT_RETURN.ERROR, "Failed reading nodes")
-		nodes.append(root_node)
-		_flatten_nodes(root_node)
+		for i in range(node_count):
+			if f.eof_reached():
+				return _make_response(IMPORT_RETURN.ERROR, "Unexpected EOF at node " + str(i))
+			var node = LTNode.new()
+			if not node.read(self, f):
+				return _make_response(IMPORT_RETURN.ERROR, "Failed reading node " + str(i))
+			nodes.append(node)
+		# End For
+		LTNode.link_children(nodes, 0, null)
 	
 	print("Successfully loaded: ", pieces.size(), " pieces, ", nodes.size(), " nodes")
 	name = "LTB_PC_Model"
@@ -127,11 +148,6 @@ func _skip_obb(f: File):
 	# OBB = LTMatrix = 4 * LTQuat = 4 * 4 floats = 16 floats
 	for i in range(16):
 		f.get_float()
-
-func _flatten_nodes(node):
-	for child in node.children:
-		nodes.append(child)
-		_flatten_nodes(child)
 
 func read_string(f: File) -> String:
 	var length = f.get_16()
@@ -404,38 +420,44 @@ class Face:
 class LTNode:
 	var name = ""
 	var index = 0
+	var child_count = 0
 	var bind_matrix = Transform()
 	var parent = null  # weakref(), um Referenzzyklus mit children zu vermeiden
 	var children = []
-	
-	func read(ltb, f: File, depth: int) -> bool:
-		# Protect against infinite recursion
-		if depth > 100:
-			print("ERROR: Node recursion too deep!")
-			return false
-		
+
+	# Liest EINEN Node flach (kein Rekurs, keine Children im File-Layout --
+	# siehe Kommentar am Aufrufer). Die Baumverknuepfung passiert danach
+	# separat per link_children() ueber die komplette flache Liste.
+	func read(ltb, f: File) -> bool:
 		if f.eof_reached():
 			return false
-		
+
 		name = ltb.read_string(f)
 		index = f.get_16()
 		var flags = f.get_8()
 		bind_matrix = ltb.read_matrix(f)
-		var child_count = f.get_32()
-		
+		child_count = f.get_32()
+
 		# Sanity check
 		if child_count < 0 or child_count > 1000:
 			print("ERROR: Invalid child_count: ", child_count, " for node: ", name)
 			return false
-		
+
 		print("Node '", name, "' Index:", index, " Children:", child_count)
-		
-		# Read children recursively
-		for i in range(child_count):
-			var child = LTNode.new()
-			if not child.read(ltb, f, depth + 1):
-				return false
-			child.parent = weakref(self)
-			children.append(child)
-		
 		return true
+
+	# Tiefensuche ueber die flache Liste: rekonstruiert Parent/Children rein
+	# im Speicher aus der Reihenfolge + child_count -- analog zu ABC.gd's
+	# LTNode.link_children und io_scene_lithtech's build_undirected_tree().
+	static func link_children(node_list, node_index: int, parent) -> int:
+		var node = node_list[node_index]
+
+		if parent != null:
+			node.parent = weakref(parent)
+			parent.children.append(node)
+
+		for _i in range(node.child_count):
+			node_index += 1
+			node_index = link_children(node_list, node_index, node)
+
+		return node_index

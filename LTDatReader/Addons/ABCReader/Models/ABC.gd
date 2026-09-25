@@ -337,31 +337,58 @@ class ABC:
 		# End Func
 	# End Weightset
 	
+	# BESTAETIGT (2026-09, Sten/Claude, gegen ABC_V9-132.bt/ABC_V9-134.bt und
+	# den bytegenau verifizierten reader_abc_pc.py): es gibt ZWEI
+	# verschiedene Structs, nicht eins. Das einfache "Transform"
+	# (Location+Rotation, KEIN Extra-Feld, egal welche Version) wird von
+	# ChildModel.Transforms benutzt; "AnimTransform" (zusaetzlich zwei
+	# unbekannte Floats bei v13) NUR von Animation-Keyframe-Transforms.
+	# LTTransform.read() hier hat den v13-Skip vorher unconditional gemacht
+	# und wurde von BEIDEN Verwendungen geteilt -- falsch fuer ChildModel
+	# bei v13-Dateien mit echten ChildModels. Aufgeteilt in eine reine
+	# read() (fuer ChildModel) und eine read_anim() (fuer Animation).
 	class LTTransform:
 		var location = Vector3()
 		var rotation = Quat()
-		
+
 		func read(abc : ABC, f : File):
 			self.location = abc.read_vector3(f)
 			self.rotation = abc.read_quat(f)
-			
-			# Two unknown floats
+		# End Func
+
+		func read_anim(abc : ABC, f : File):
+			self.read(abc, f)
+
+			# Zwei unbekannte Floats, NUR bei v13, NUR fuer Animation-
+			# Keyframe-Transforms (AnimTransform-Struct) -- nie fuer
+			# ChildModel.Transforms (plain Transform-Struct).
 			if (abc.version >= 13):
 				f.seek(f.get_position() + 8)
 		# End Func
 	# End LTTransform
-	
+
 	class ChildModel:
 		var name = ""
 		var build_number = 0
-		var lt_transform = null
-		
+		# Ein Transform PRO NODE des Modells (node_count Eintraege) --
+		# vorher wurde hier nur EIN EINZIGER Transform gelesen
+		# (self.lt_transform), was ChildModel-Eintraege ab dem zweiten
+		# (bei jeder Datei mit mehr als einem ChildModel, z.B. ALEXANDER.LTB
+		# mit 4 oder hero_action.abc mit 3) komplett falsch ausgerichtet
+		# hat -- Name/BuildNumber der Folge-Eintraege wurden aus
+		# Zufallsbytes gelesen. Bytegenau gegen reader_abc_pc.py's
+		# _read_child_model() korrigiert.
+		var transforms = []
+
 		func read(abc : ABC, f : File):
 			self.name = abc.read_string(f)
 			self.build_number = f.get_32()
-			self.lt_transform = LTTransform.new()
-			self.lt_transform.read(abc, f)
-			# End If
+			self.transforms = []
+			for i in range(abc.node_count):
+				var t = LTTransform.new()
+				t.read(abc, f)
+				self.transforms.append(t)
+			# End For
 		# End Func
 	# End ChildModel
 	
@@ -377,34 +404,47 @@ class ABC:
 		func read(abc : ABC, f : File):
 			self.extents = abc.read_vector3(f)
 			self.name = abc.read_string(f)
-			self.unknown = f.get_32()
-			# Only valid for 12 and up!
-			if abc.version >= 12:
-				self.interp_time = f.get_32()
+			self.unknown = f.get_32()  # "Val" per ABC_V9-134.bt
+
+			# BESTAETIGT (2026-09, Sten/Claude, gegen ABC_V9-132.bt/
+			# ABC_V9-134.bt): Val ist ein ECHTER Discriminator. Nur wenn
+			# Val==-1 folgen (bei v12/v13 zusaetzlich ein UnkInt-Feld davor)
+			# die echte KeyFrameCount als eigenes Feld; wenn Val!=-1, IST
+			# Val selbst schon die KeyFrameCount und es folgt nichts
+			# weiter. Vorher wurde IMMER der Val==-1-Zweig angenommen --
+			# in allen bisher geprueften echten Dateien war Val zwar
+			# tatsaechlich immer -1, aber das war Zufall, kein Beweis.
+			if self.unknown == -1:
+				if abc.version >= 12:
+					self.interp_time = f.get_32()
+				# End If
+				self.keyframe_count = f.get_32()
+			else:
+				self.interp_time = 200
+				self.keyframe_count = self.unknown
 			# End If
-			self.keyframe_count = f.get_32()
-			
+
 			for i in range (self.keyframe_count):
 				var lt_keyframe = LTKeyframe.new()
 				lt_keyframe.read(abc, f)
 				self.keyframes.append(lt_keyframe)
 			# End For
-			
+
 			for i in range(abc.node_count):
 				# Skip some unknown data
 				if abc.version >= 13:
 					f.seek(f.get_position() + 4)
 				# End If
-				
+
 				var keyframes_per_node = []
 				for j in range(self.keyframe_count):
 					var lt_transform = LTTransform.new()
-					lt_transform.read(abc, f)
+					lt_transform.read_anim(abc, f)
 					keyframes_per_node.append(lt_transform)
 				# End For
 				self.node_keyframes.append(keyframes_per_node)
 			# End For
-			
+
 		# End Func
 	# End LTAnim
 	
