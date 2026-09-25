@@ -1,9 +1,9 @@
 Decompiled version of LithTools by HeyThereCoffeee
 
 - primarily fixed is the NOLF PS2 stuff like Level, Model and Texture viewing  
-- LTA exporting of levels PC and PS2
-- viewing of Models in abc/ltb format (tested with Blood2, NOLF1, NOLF2)  
-- viewing of Levels dat and ltb format (Blood2, Die Hard, NOLF1 PS2, NOLF1 PC, NOLF2)
+- LTA exporting of levels PC and PS2, works best with NOLF1
+- viewing of Models in ABC/LTB/LTB ABC/LTB D3D format (tested with Blood2, NOLF1, NOLF2, Die Hard Nakatomi Plaza)  
+- viewing of Levels DAT and LTB format (Blood2, Die Hard, NOLF1 PS2, NOLF1 PC, NOLF2)
 - skipping lightmap reading stuff since it's not used by Godot, which makes it very fast in loading and saving LTA
 
 Set up folder containing textures (tex folder) in settings.cfg in LTDatReader root folder.
