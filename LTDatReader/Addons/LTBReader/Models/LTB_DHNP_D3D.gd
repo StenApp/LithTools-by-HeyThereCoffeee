@@ -570,6 +570,21 @@ class LTAnim:
 		self.name = dhnp.read_string(f)
 		var val = f.get_32()  # "Val" per ABC_V9-134.bt / reader_ltb_dhnp.py
 
+		# BUGFIX (2026-09, Sten/Claude, gefunden beim Testen von echten
+		# v11/v12/v13-Dateien mit echten Animationen -- vorher hing/fror
+		# Godot beim Laden ein): File.get_32() liest in Godot 3.x IMMER
+		# als UNSIGNED int (0..4294967295). Steht im File der Wert -1 (als
+		# int32 = Bytes FF FF FF FF), kommt hier 4294967295 an, NIE -1 --
+		# der Vergleich "val == -1" unten waere ohne diese Korrektur IMMER
+		# falsch, selbst wenn die Datei echt -1 geschrieben hat. Ohne Fix
+		# nimmt der Code dann faelschlich den else-Zweig und setzt
+		# keyframe_count auf 4294967295 -- die anschliessenden for-
+		# Schleifen (KeyFrames, Transforms) versuchen dann Milliarden
+		# Iterationen und Godot haengt sich praktisch auf. Fix: manuelle
+		# Vorzeichen-Korrektur (Zwei-Komplement) direkt nach dem Lesen.
+		if val >= 0x80000000:
+			val -= 0x100000000
+
 		# BESTAETIGT (2026-09, Sten/Claude): Val ist ein echter
 		# Discriminator, kein konstantes -1-Feld. Nur wenn Val==-1 folgt
 		# die echte KeyFrameCount (bei v12/v13 mit einem UnkInt davor);

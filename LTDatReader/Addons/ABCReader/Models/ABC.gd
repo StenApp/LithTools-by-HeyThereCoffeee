@@ -406,6 +406,23 @@ class ABC:
 			self.name = abc.read_string(f)
 			self.unknown = f.get_32()  # "Val" per ABC_V9-134.bt
 
+			# BUGFIX (2026-09, Sten/Claude, gefunden beim Testen von echten
+			# v11/v12/v13-ABC-Dateien mit echten Animationen -- vorher hing/
+			# fror Godot beim Laden ein): File.get_32() liest in Godot 3.x
+			# IMMER als UNSIGNED int (0..4294967295). Steht im File der Wert
+			# -1 (als int32 = Bytes FF FF FF FF), kommt hier 4294967295 an,
+			# NIE -1 -- der Vergleich "self.unknown == -1" unten waere ohne
+			# diese Korrektur IMMER falsch, selbst wenn die Datei echt -1
+			# geschrieben hat. Ohne Fix nimmt der Code dann faelschlich den
+			# else-Zweig und setzt keyframe_count auf 4294967295 -- die
+			# anschliessenden for-Schleifen (KeyFrames, Transforms) versuchen
+			# dann Milliarden Iterationen und Godot haengt sich praktisch
+			# auf. Fix: manuelle Vorzeichen-Korrektur (Zwei-Komplement)
+			# direkt nach dem Lesen. (v9/v10-Testdateien hatten zufaellig
+			# Val>=0 und haben den Bug bisher verdeckt.)
+			if self.unknown >= 0x80000000:
+				self.unknown -= 0x100000000
+
 			# BESTAETIGT (2026-09, Sten/Claude, gegen ABC_V9-132.bt/
 			# ABC_V9-134.bt): Val ist ein ECHTER Discriminator. Nur wenn
 			# Val==-1 folgen (bei v12/v13 zusaetzlich ein UnkInt-Feld davor)
