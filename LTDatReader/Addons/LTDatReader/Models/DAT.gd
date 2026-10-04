@@ -1271,7 +1271,8 @@ class DAT:
 			elif self.code == PROP_UNK_INT:
 				self.value = f.get_32()
 			elif self.code == PROP_ROTATION:
-				self.value = dat.read_quat(f)
+				self.value = dat.read_vector3(f)
+				var _pad = f.get_float()
 			# End If
 		# End Func
 		
@@ -1292,11 +1293,13 @@ class DAT:
 				return null
 			elif self.code == PROP_LONG_INT:
 				return [ 'longint', self.name, self.value ]
+			# elif self.code == PROP_ROTATION:
+				# var q = self.value
+				# if q.length_squared() < 0.0001:
+					# return [ 'rotation', self.name, '___eulerangles', Vector3(0, 0, 0) ]
+				# return [ 'rotation', self.name, '___eulerangles', q.normalized().get_euler() ]
 			elif self.code == PROP_ROTATION:
-				var q = self.value
-				if q.length_squared() < 0.0001:
-					return [ 'rotation', self.name, '___eulerangles', Vector3(0, 0, 0) ]
-				return [ 'rotation', self.name, '___eulerangles', q.normalized().get_euler() ]
+				return ['rotation', self.name, '___eulerangles', self.value]
 			# End If
 		# End Func
 	# End Class
