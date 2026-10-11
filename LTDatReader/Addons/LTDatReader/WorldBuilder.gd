@@ -614,12 +614,8 @@ func fill_array_mesh(model, world_models = []):
 				var dims = dtx_reader.get_cached_dims(texture_name)
 				tex_width = dims.x
 				tex_height = dims.y
-			
-			var plane
-			if model.is_lithtech_1():
-				plane = world_model.planes[surface.unknown]
-			else:
-				plane = world_model.planes[poly.plane_index]
+				
+			var plane = world_model.planes[poly.plane_index]
 			
 			# Lightmap handling
 			var lm_image = poly.lightmap_texture as Image

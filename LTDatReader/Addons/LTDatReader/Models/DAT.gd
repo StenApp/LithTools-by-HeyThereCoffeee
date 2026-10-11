@@ -488,7 +488,8 @@ class DAT:
 		var uv5 = Vector3()
 		var colour = Vector3()
 		
-		var unknown = 0
+		#var unknown = 0
+		var plane_index = 0   # LT1/LT2: Plane-Index der Fläche steht im Surface
 		var unknown2 = 0
 		
 		var texture_flags = 0
@@ -528,7 +529,8 @@ class DAT:
 			self.texture_index = f.get_16()
 			
 			if dat.is_lithtech_1() || dat.is_lithtech_2():
-				self.unknown = f.get_32()
+				#self.unknown = f.get_32()
+				self.plane_index = f.get_32()
 			# End If
 			
 			self.flags = f.get_32()
@@ -972,6 +974,11 @@ class DAT:
 				
 				self.polies.append(poly)
 			# End For
+			
+			# LT1/LT2: poly.plane_index ist dort nicht belegt, der Index steckt im Surface
+			if dat.is_lithtech_1() || dat.is_lithtech_2():
+				for p in self.polies:
+					p.plane_index = self.surfaces[p.surface_index].plane_index
 			
 			# Skip BSP nodes - not needed for rendering
 			# LT2: 4+2+4+4 = 14 bytes per node
