@@ -2,8 +2,8 @@ struct LTVector {
     float x, y, z;
 };
 
-struct LTQuaternion {
-    float x, y, z, w;
+struct LTEulerAngle {
+    float x, y, z, w; //Eulerangle in Radiant
 };
 
 struct LTString {
@@ -105,8 +105,7 @@ struct Surface {
     LTVector UV3;
 
     ushort Texture;
-    //uchar Unk[4];
-    int Unk1;
+    int PlaneIndex;
     int Flags;
     uchar Unk2[4];
     
@@ -139,9 +138,9 @@ struct Polygon (Vertex &VertexInfo) {
         short MoreUnknown[Unknown * 2];
     }
     
-
-    short SurfaceIndex;
-    short PlaneIndex;
+    int SurfaceIndex;
+    //short SurfaceIndex;
+    //short PlaneIndex; //unused value!!!
     
 /*
     LTVector UV1;
@@ -302,11 +301,10 @@ struct ObjectProperty {
         break;
         case 4: // Flags
         case 6: // Long Int
-        float Value;
-        local int32 LongIntValue = (int32)Value;
+        uint Value;
         break;
         case 7: // Rotation
-        LTQuaternion Value;
+        LTEulerAngle Value;
         break;
     };
 };
