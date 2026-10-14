@@ -13,4 +13,40 @@ Setting export_to_lta_on_load =true exports the level to an LTA level file (NOLF
 
 Texture viewer is  tested for BBP_8P, BPP_32 and BPP_32P textures. Needs verification for other types.
 
-Use Godot_v3.6.2-stable_win64.exe with this project
+Use >= Godot_v3.6.2-stable_win64.exe with this project
+
+# Lithtech versions
+```text
+Lithtech 1.0 (DAT v56), uses DTX v1, ABCv6
+    Shogo: Mobile Armor Division
+    Blood II: The Chosen
+    Sanity: Aiken's Artifact (had some Lithtech 2.0 enhancements)
+
+Lithtech 1.0 (DAT v57), uses DTX v1, ABCv6
+    TNN Outdoors Pro Hunter 2
+
+Custom 1.5 (DAT v127), uses DTX v1.5, ABCv6
+    KISS: Psycho Circus: The Nightmare Child
+
+Lithtech 1.5 (DAT v66), uses DTX v2, ABCv13
+The engine is 1.5 but textures and levels are packed as LithTech 2x resources
+    Might and Magic IX
+
+Lithtech 2.x (DAT v66), uses DTX v2
+    The Operative: No One Lives Forever ABCv12
+    Legends of Might and Magic, ABCv13
+    Die Hard: Nakatomi Plaza, LTB ABC and LTB D3D
+
+Lithtech PS2 (LTB v66), uses DTX v2 (mainly BPP_32P), LTB V16
+    The Operative: No One Lives Forever (PS2)
+
+Lithtech Talon (DAT v70), uses DTX v2, ABCv12
+    Aliens versus Predator 2
+
+Lithtech Jupiter (DAT v85), uses DTX v2, LTB Models
+    No One Lives Forever 2: A Spy In H.A.R.M.'s Way
+    Contract J.A.C.K.
+    Tron 2.0
+```
+
+
