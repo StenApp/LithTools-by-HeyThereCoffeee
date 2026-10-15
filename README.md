@@ -20,10 +20,10 @@ Use >= Godot_v3.6.2-stable_win64.exe with this project
 Lithtech 1.0 (DAT v56), uses DTX v1, ABCv6
     Shogo: Mobile Armor Division
     Blood II: The Chosen
-    Sanity: Aiken's Artifact (had some Lithtech 2.0 enhancements)
 
 Lithtech 1.0 (DAT v57), uses DTX v1, ABCv6
     TNN Outdoors Pro Hunter 2
+    Sanity: Aiken's Artifact (had some Lithtech 2.0 enhancements)
 
 Custom 1.5 (DAT v127), uses DTX v1.5, ABCv6
     KISS: Psycho Circus: The Nightmare Child
