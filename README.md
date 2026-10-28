@@ -28,12 +28,9 @@ Lithtech 1.0 (DAT v57), uses DTX v1, ABCv6
 Custom 1.5 (DAT v127), uses DTX v1.5, ABCv6
     KISS: Psycho Circus: The Nightmare Child
 
-Lithtech 1.5 (DAT v66), uses DTX v2, ABCv13
-The engine is 1.5 but textures and levels are packed as LithTech 2x resources
-    Might and Magic IX
-
 Lithtech 2.x (DAT v66), uses DTX v2
     The Operative: No One Lives Forever ABCv12
+    Might and Magic IX, ABCv13
     Legends of Might and Magic, ABCv13
     Die Hard: Nakatomi Plaza, LTB ABC and LTB D3D
 
