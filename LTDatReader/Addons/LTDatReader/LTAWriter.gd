@@ -675,7 +675,8 @@ class LTAWriter:
 				# var block_light = int(surface.flags & (1 << 30) != 0)
 				# prop_list.create_prop_entry('bool', 'BlockLight', block_light)
 
-				prop_list.create_prop_entry('longint', 'DetailLevel', 0)
+				prop_list.create_prop_entry('longint', 'DetailLevel', surface.detail_level)
+				#prop_list.create_prop_entry('longint', 'DetailLevel', 0)
 				#prop_list.create_prop_entry('string', 'Effect', '')
 				#prop_list.create_prop_entry('string', 'EffectParam', '')
 				if surface.use_effects == 1:

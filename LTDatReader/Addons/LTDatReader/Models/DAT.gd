@@ -495,6 +495,7 @@ class DAT:
 		var texture_flags = 0
 		var texture_index = 0
 		var flags = 0
+		var detail_level = 0   # NEU – Default 0, nur gesetzt wenn Version das Feld hat
 		var use_effects = 0
 		var effect_name = ""
 		var effect_param = ""
@@ -535,8 +536,10 @@ class DAT:
 			
 			self.flags = f.get_32()
 			
-			# Maybe bytes?
-			self.unknown2 = f.get_32()
+			# DetailLevel + 3 IgnoredBytes (v56/57/66/70/127)
+			# Jupiter hat das Feld nicht → detail_level bleibt 0
+			self.detail_level = f.get_8()
+			f.get_buffer(3)   # IgnoredBytes – Engine verwirft sie
 			
 			self.use_effects = f.get_8()
 			
