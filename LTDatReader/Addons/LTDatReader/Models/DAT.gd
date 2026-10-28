@@ -11,23 +11,19 @@ class DAT:
 	# sowie vom Nutzer verifizierte Spieleliste):
 	#
 	#   v56  LithTech 1.0            DTX v1    - Shogo: Mobile Armor Division, Blood II: The Chosen
-	#   v66  LithTech 1.5            DTX v1.5  - Might and Magic IX
-	#                                             (Engine ist 1.5, aber Texturen/Level sind als
-	#                                             LithTech-2.x-Ressourcen gepackt - daher v66, nicht v57!)
-	#   v66  LithTech 2.x            DTX v2    - NOLF1 (PC), Sanity: Aiken's Artifact,
-	#                                             Legends of Might and Magic, Die Hard: Nakatomi Plaza
+	#   v57  LithTech 1.0            DTX v1    - Sanity: Aiken's Artifact, TNN Outdoors Pro Hunter 2
+	#   v66  LithTech 2.x            DTX v2    - NOLF1 (PC), Legends of Might and Magic,
+	#                                            Might and Magic IX, Die Hard: Nakatomi Plaza
 	#   v66  LithTech PS2 (LTB)                - NOLF1 (PS2) - eigenes Format trotz gleicher Versionsnummer!
 	#   v70  LithTech Talon          DTX v2    - Aliens versus Predator 2
 	#   v85  LithTech Jupiter                  - NOLF2, Tron 2.0, Medal of Honor: Pacific Assault
 	#   v127 Kiss Psycho Circus (Custom 1.5)   - KISS: Psycho Circus: The Nightmare Child
 	#
-	# WICHTIG: DAT_VERSION_LT15 ist unten als 57 definiert, aber laut obiger Liste nutzt das
-	# tatsaechlich bekannte 1.5-Release (Might and Magic IX) Version 66 - identisch mit
-	# LT_VERSION_NOLF! Drei Versionen (1.5/MM9, 2.x, PS2-LTB) teilen sich offenbar die
-	# Nummer 66. Ob v57 real als eigenstaendige, je ausgelieferte Version existiert oder nur
-	# eine Zwischenstufe ohne bekanntes Spiel ist, konnte nicht abschliessend geklaert werden -
-	# noch offen, falls das je eine Rolle spielt (z.B. is_lithtech_15()-Erkennung ueberpruefen).
+	# Hinweis: Might and Magic IX läuft unter v66 (wie die 2.x-Spiele), obwohl die Engine
+	# intern noch als 1.5 gilt. v57 ist eine eigenständige 1.0-Variante (Sanity / TNN).
+	# Die Nummer 66 wird von PC-2.x, MM9 und dem PS2-LTB-Format geteilt.
 	#
+	
 	const DAT_VERSION_LT1  = 56
 	const DAT_VERSION_LT15 = 57
 	const DAT_VERSION_PSYCHO = 127 # Psycho Circus uses an adjusted version of 57
