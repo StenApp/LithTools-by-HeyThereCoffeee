@@ -6,23 +6,18 @@ const BinPrim = preload("res://Addons/LTDatReader/BinaryReadPrimitives.gd")
 class DAT:
 	
 	# Versioning
-	# Lithtech 1.0 - 1.5
-	# LithTech DAT-Versionsgeschichte (Quelle: PCWorldPacker.cpp Versions-Kommentare
-	# sowie vom Nutzer verifizierte Spieleliste):
+	# LithTech DAT-Versionsgeschichte (Quelle: PCWorldPacker.cpp + verifizierte Spieleliste):
 	#
 	#   v56  LithTech 1.0            DTX v1    - Shogo: Mobile Armor Division, Blood II: The Chosen
 	#   v57  LithTech 1.0            DTX v1    - Sanity: Aiken's Artifact, TNN Outdoors Pro Hunter 2
 	#   v66  LithTech 2.x            DTX v2    - NOLF1 (PC), Legends of Might and Magic,
 	#                                            Might and Magic IX, Die Hard: Nakatomi Plaza
-	#   v66  LithTech PS2 (LTB)                - NOLF1 (PS2) - eigenes Format trotz gleicher Versionsnummer!
+	#   v66  LithTech PS2 (LTB)                - NOLF1 (PS2) – eigenes Format trotz gleicher Versionsnummer
 	#   v70  LithTech Talon          DTX v2    - Aliens versus Predator 2
-	#   v85  LithTech Jupiter                  - NOLF2, Tron 2.0, Medal of Honor: Pacific Assault
+	#   v85  LithTech Jupiter                  - NOLF2, Tron 2.0, Contract J.A.C.K.
 	#   v127 Kiss Psycho Circus (Custom 1.5)   - KISS: Psycho Circus: The Nightmare Child
 	#
-	# Hinweis: Might and Magic IX läuft unter v66 (wie die 2.x-Spiele), obwohl die Engine
-	# intern noch als 1.5 gilt. v57 ist eine eigenständige 1.0-Variante (Sanity / TNN).
-	# Die Nummer 66 wird von PC-2.x, MM9 und dem PS2-LTB-Format geteilt.
-	#
+	# Hinweis: Die Nummer 66 wird von PC-2.x (inkl. MM9, LoMM) und dem PS2-LTB-Format geteilt.
 	
 	const DAT_VERSION_LT1  = 56
 	const DAT_VERSION_LT15 = 57

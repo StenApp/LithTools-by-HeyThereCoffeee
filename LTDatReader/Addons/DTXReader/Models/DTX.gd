@@ -144,8 +144,10 @@ class DTX:
 	# Entspricht DtxHeader::GetBPPIdent() aus dtxmgr.h:
 	# m_Extra[2]==0 bedeutet BPP_32 (nicht BPP_8P!).
 	# Hintergrund: SetBPPIdent(BPP_32) schreibt 3, GetBPPIdent() gibt bei 0 als Default BPP_32 zurueck.
+	# LT1 / LT1.5: immer BPP_8P (extra[2]/bytes_per_pixel hat dort andere Bedeutung)
+	# LT2: 0 → BPP_32, sonst der gespeicherte Wert
 	func get_bpp_ident() -> int:
-		if self.version == DTX_VERSION_LT1 and self.bytes_per_pixel == 0:
+		if [DTX_VERSION_LT1, DTX_VERSION_LT15].has(self.version):
 			return BPP_8P
 		return BPP_32 if self.bytes_per_pixel == 0 else self.bytes_per_pixel
 
@@ -295,40 +297,76 @@ class DTX:
 	# Read in a 8-bit palettized texture
 	# Basically for Lithtech 1.0 games.
 	#
+	# LT1 / LT1.5 Layout (Engine Blood 2 / KISS):
+	#   8 Byte palette_id
+	#   1024  Palette 256 × {unused, R, G, B}
+	#   Mipmaps 8-Bit Indices
+	#   [optional] 4-Bit Alpha-Masks  (Flag Bit 1 = DTX_OLD_ALPHAMASKS)
+	# Alpha = mask-nibble * 17; Palette-Index >= 246 immer undurchsichtig
+	const DTX_OLD_ALPHAMASKS = (1 << 1)
+	const K_OLD_OPAQUE_FIRST = 246
+
 	func read_8bit_palette(f : File):
 		var image = Image.new()
 		var palette = []
-		
-		#print("read_8bit_palette: version=", self.version, " LT1=", DTX_VERSION_LT1, " match=", self.version == DTX_VERSION_LT1)
-		
-		var _palette_header_1 = f.get_32()
-		var _palette_header_2 = f.get_32()
 
-		# Palette: Format ist ARGB laut pixelformat.h RPaletteColor { uchar a,r,g,b }
+		# 8-Byte palette_id
+		var _pid0 = f.get_32()
+		var _pid1 = f.get_32()
+
+		# Palette: {unused, R, G, B} — Byte 0 ignorieren
 		for _i in range(256):
-			var a = f.get_8()
+			var _unused = f.get_8()
 			var r = f.get_8()
 			var g = f.get_8()
 			var b = f.get_8()
-			palette.append( Quat(r, g, b, 255) )
-		# End For
+			palette.append(Quat(r, g, b, 255))
 
-		var data = f.get_buffer(self.width * self.height * 1)
+		var w = self.width
+		var h = self.height
+		var data = f.get_buffer(w * h)
+
+		# restliche Mipmaps ueberspringen
+		var mw = w
+		var mh = h
+		for _m in range(max(0, self.mipmap_count - 1)):
+			mw = int(max(1, mw / 2))
+			mh = int(max(1, mh / 2))
+			f.get_buffer(mw * mh)
+
+		# optionale 4-Bit Alpha-Masks
+		var has_masks = (self.flags & DTX_OLD_ALPHAMASKS) != 0
+		var mask0 = PoolByteArray()
+		if has_masks:
+			var n = w * h
+			var mask_size = 1 if n <= 1 else int(n / 2)
+			mask0 = f.get_buffer(mask_size)
+			# restliche Mask-Mips ueberspringen (nicht noetig fuer Stufe 0)
+
 		var colour_data = PoolByteArray()
-		
-		var i = 0
-		
-		# Apply the palette
-		while (i < data.size() ):
-			colour_data.append( palette[data[i]].x )  # R
-			colour_data.append( palette[data[i]].y )  # G
-			colour_data.append( palette[data[i]].z )  # B
-			colour_data.append( palette[data[i]].w )  # A
-			i += 1
-		# End While
-		
-		image.create_from_data(self.width, self.height, false, Image.FORMAT_RGBA8, colour_data)
-		
+		var stride = int(w / 2)
+		for y in range(h):
+			for x in range(w):
+				var i = y * w + x
+				var idx = data[i] if i < data.size() else 0
+				var col = palette[idx] if idx < palette.size() else Quat(1, 0, 1, 1)
+				var a = 255
+				if has_masks and idx < K_OLD_OPAQUE_FIRST:
+					if mask0.size() > 0 and x < stride * 2:
+						var m = y * stride + int(x / 2)
+						if m < mask0.size():
+							var nib = (mask0[m] >> (4 * (x & 1))) & 0xF
+							a = nib * 17
+						else:
+							a = 0
+					else:
+						a = 0
+				colour_data.append(col.x)
+				colour_data.append(col.y)
+				colour_data.append(col.z)
+				colour_data.append(a)
+
+		image.create_from_data(w, h, false, Image.FORMAT_RGBA8, colour_data)
 		return image
 	# End Func
 		
