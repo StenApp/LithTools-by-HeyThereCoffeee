@@ -51,7 +51,7 @@ func import(source_file, save_path, options, platform_variants, gen_files):
 			print("LTB-wrap erkannt, aber Lesen fehlgeschlagen")
 			return FAILED
 
-		print("LTB-wrap erkannt - FileType: ", wrapper.file_type, " Version: ", wrapper.version)
+		print("LTB-wrap erkannt - FileType: ", wrapper.file_type, " Container: ", wrapper.container, " Body: ", wrapper.body_version)
 
 		var scene = FAILED
 		if wrapper.file_type == ltb_wrapper.LTB_WRAP_ABC_FILE_TYPE:

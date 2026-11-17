@@ -63,8 +63,7 @@ func build(source_file, options):
 			print("LTB-wrap erkannt, aber Lesen fehlgeschlagen: " + source_file)
 			return FAILED
 
-		print("LTB-wrap erkannt - FileType: ", wrapper.file_type, " Version: ", wrapper.version)
-		self.last_build_type = "model_ltb_wrap"
+		print("LTB-wrap erkannt - FileType: ", wrapper.file_type, " Container: ", wrapper.container, " Body: ", wrapper.body_version)
 
 		if wrapper.file_type == LTB_WRAPPER.LTB_WRAP_ABC_FILE_TYPE:
 			print("LTB wrap ABC body - delegiere an ABCReader/ModelBuilder.gd")
