@@ -45,7 +45,7 @@ class ABC:
 		# Section-Scan bei Byte 0 ("Header" ist die erste Section). Die
 		# Die-Hard:-Nakatomi-Plaza-Sondervariante von LTB wickelt einen
 		# sonst identischen ABC-Body in einen aeusseren LTB-Container ein
-		# (LTBHeader-String + LTB_Header); LTBImporter.gd/DHNPWrapper.gd
+		# (LTBHeader-String + LTB_Header); LTBImporter.gd/LTBWrapper.gd
 		# uebergeben hier die Groesse dieses Wrappers, damit dieselbe
 		# Section-Scan-Schleife unveraendert fuer beide Faelle funktioniert
 		# (siehe io_scene_lithtech's reader_abc_pc.py fuer denselben Trick

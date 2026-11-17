@@ -1,17 +1,17 @@
-# res://Addons/LTBReader/Models/LTB_DHNP_D3D.gd
-class_name LTB_DHNP_D3D
+# res://Addons/LTBReader/Models/LTB_Wrap_D3D.gd
+class_name LTB_Wrap_D3D
 
 const BinPrim = preload("res://Addons/LTDatReader/BinaryReadPrimitives.gd")
 
-# Die-Hard:-Nakatomi-Plaza (DHNP) D3D-Hybrid-LTB-Body-Reader.
+# Die-Hard:-Nakatomi-Plaza (LTB wrap) D3D-Hybrid-LTB-Body-Reader.
 #
-# 1:1-Portierung der bereits gegen 7 echte DHNP-D3D-Hybrid-LTBs
+# 1:1-Portierung der bereits gegen 7 echte LTB-wrap-D3D-LTBs
 # (ALEXANDER, TERRORIST_1, POWEL2, ULI, BUILDING, LOGO, V_ZIPPO) byte-perfekt
 # validierten Python-Referenz (io_scene_lithtech/src/reader_ltb_dhnp.py,
-# Klasse DHNPD3DModelReader). Kein neues Reverse-Engineering hier -- nur
+# Klasse LTB wrapD3DModelReader). Kein neues Reverse-Engineering hier -- nur
 # Uebertragung der schon bestaetigten Logik nach GDScript.
 #
-# Genutzt wird das hier IMMER ueber den DHNP-Wrapper (siehe DHNPWrapper.gd);
+# Genutzt wird das hier IMMER ueber den LTB-wrap (siehe LTBWrapper.gd);
 # start_offset ist die Position direkt hinter dem Wrapper, ab der die normale
 # Section-Scan-Schleife beginnt (Header/Pieces/Nodes/ChildModels/Animation/
 # Sockets/AnimBindings -- gleiches Section-Layout wie beim ABC-Body, nur die
@@ -26,6 +26,9 @@ const BinPrim = preload("res://Addons/LTDatReader/BinaryReadPrimitives.gd")
 
 const MT_RIGID = 4
 const MT_SKELETAL = 5
+# MeshType 6 (belegt an Model-Railroad-Simulator-Dateien, u.a. shrub1/crossingsign3/bush1): statisches Basismesh an
+# einem Node; die Morph-Positionen stehen in der ANIMATION, nicht im Piece (siehe LTAnim.read).
+const MT_MORPH = 6
 const INVALID_BONE = 255
 
 var name = ""
@@ -46,6 +49,8 @@ var child_model_anim_bindings = []
 var command_string = ""
 var internal_radius = 0.0
 var lod_distances = []
+# Summe der VertCount aller MeshType-6-LODs: bestimmt, wie viele float3-Morphpositionen je Keyframe in jeder Animation folgen.
+var mt6_vert_sum = 0
 
 enum IMPORT_RETURN {SUCCESS, ERROR}
 
@@ -60,7 +65,7 @@ func read(f: File, start_offset: int = 0) -> Dictionary:
 
 		if section_name == 'Header':
 			self.version = f.get_32()
-			print("DHNP D3D Version: " + str(self.version))
+			print("LTB wrap D3D Version: " + str(self.version))
 
 			f.seek(f.get_position() + 8)  # KeyframeCount, AnimationCount
 			self.node_count = f.get_32()
@@ -85,7 +90,7 @@ func read(f: File, start_offset: int = 0) -> Dictionary:
 
 			print("Header Info:\n - Node Count: " + str(self.node_count) + "\n - LOD Count: " + str(self.lod_count))
 		elif section_name == 'Pieces':
-			# DHNP-D3D-PieceHeader hat KEIN WeightCount-Feld, nur PieceCount
+			# LTB-wrap-D3D-PieceHeader hat KEIN WeightCount-Feld, nur PieceCount
 			# (bestaetigt anders als beim ABC-Body).
 			var piece_count = f.get_32()
 			for i in range(piece_count):
@@ -109,6 +114,8 @@ func read(f: File, start_offset: int = 0) -> Dictionary:
 				self.weight_sets.append(weight_set)
 			# End For
 		elif section_name == 'ChildModels':
+			# uint16 (wie ABC v9-13). Im D3D-Format steht dort ein uint32 mit Self ohne Namen, was byte-identisch ist:
+			# die oberen 2 Byte (0) lesen sich als leerer LTString-Name des Platzhalter-ChildModels (Index 0).
 			var child_model_count = f.get_16()
 			for i in range(child_model_count):
 				var child_model = ChildModel.new()
@@ -138,7 +145,7 @@ func read(f: File, start_offset: int = 0) -> Dictionary:
 			# End For
 
 			# BESTAETIGT (2026-09, Sten/Claude, gegen ALEXANDER.LTB v13
-			# DHNP-D3D, ChildModelCount=4/3 echte, 1:1 uebertragen aus
+			# LTB-wrap-D3D, ChildModelCount=4/3 echte, 1:1 uebertragen aus
 			# reader_ltb_dhnp.py): nach der internen AnimBindings-Section
 			# folgt -- ohne eigenen Section-Marker -- pro ECHTEM ChildModel
 			# (Index >=1; Index 0 ist der leere Platzhalter) noch ein
@@ -165,7 +172,7 @@ func read(f: File, start_offset: int = 0) -> Dictionary:
 		print("Finished " + section_name + "\n -> Next section at " + str(next_section_offset))
 	# End While
 
-	print("Finished loading DHNP D3D-Hybrid")
+	print("Finished loading LTB wrap D3D")
 	return self._make_response(IMPORT_RETURN.SUCCESS)
 # End Func
 
@@ -226,7 +233,7 @@ class MeshLod:
 	var textures = []
 
 	# Nicht Teil des ABC-Vertex-Layouts, hier aber gebraucht, weil Piece.read()
-	# unten Material-Index/Specular vom ersten LOD hochreicht -- der DHNP-D3D-
+	# unten Material-Index/Specular vom ersten LOD hochreicht -- der LTB-wrap-D3D-
 	# Piece-Struct hat selbst keine Materialfelder (siehe LODHeader).
 	var specular_power = 0.0
 	var specular_scale = 0.0
@@ -234,7 +241,7 @@ class MeshLod:
 	var vertices = []
 	var faces = []
 
-	func _read_lod_header(dhnp, f: File) -> Dictionary:
+	func _read_lod_header(ltb, f: File) -> Dictionary:
 		var mesh_type = f.get_32()
 		var obj_size = f.get_32()
 		for i in range(7):
@@ -263,10 +270,10 @@ class MeshLod:
 			"max_bones_per_vert": max_bones_per_vert,
 		}
 
-	func _read_uv_and_faces(dhnp, f: File, vert_count: int, face_count: int):
+	func _read_uv_and_faces(ltb, f: File, vert_count: int, face_count: int):
 		var uvs = []
 		for i in range(vert_count):
-			uvs.append(dhnp.read_vector2(f))
+			uvs.append(ltb.read_vector2(f))
 		for i in range(face_count):
 			var face = Face.new()
 			for j in range(3):
@@ -280,23 +287,43 @@ class MeshLod:
 			self.faces.append(face)
 		# End For
 
-	func _read_rigid_lod(dhnp, f: File, hdr: Dictionary):
+	func _read_rigid_lod(ltb, f: File, hdr: Dictionary):
 		# BESTAETIGT per Hex-Abgleich: ein uint32 Bone-Index direkt vor den
 		# Vertices -- ein einzelner, fuer das ganze Piece geltender Bone-Index.
 		var bone_index = f.get_32()
 		for i in range(hdr.vert_count):
 			var vertex = Vertex.new()
-			vertex.location = dhnp.read_vector3(f)
-			vertex.normal = dhnp.read_vector3(f)
+			vertex.location = ltb.read_vector3(f)
+			vertex.normal = ltb.read_vector3(f)
 			var weight = Weight.new()
 			weight.node_index = bone_index
 			weight.bias = 1.0
 			vertex.weights = [weight]
 			self.vertices.append(vertex)
 		# End For
-		self._read_uv_and_faces(dhnp, f, hdr.vert_count, hdr.face_count)
+		self._read_uv_and_faces(ltb, f, hdr.vert_count, hdr.face_count)
 
-	func _read_skeletal_lod_fmt1(dhnp, f: File, hdr: Dictionary):
+	func _read_morph_lod(ltb, f: File, hdr: Dictionary):
+		# MeshType 6: uint32 Zero0, uint32 BoneIndex, uint32 Zero1, VertCount x (Position + Normale), VertCount x UV,
+		# dann MaxBonesPerTri x Dreiecke (hier ist MaxBonesPerTri die DREIECKSANZAHL, nicht FaceCount), 4 Byte Fuellung
+		# bis ObjSize (die faengt der f.seek am Ende von read() ab).
+		f.get_32()  # Zero0
+		var bone_index = f.get_32()
+		f.get_32()  # Zero1
+		for i in range(hdr.vert_count):
+			var vertex = Vertex.new()
+			vertex.location = ltb.read_vector3(f)
+			vertex.normal = ltb.read_vector3(f)
+			var weight = Weight.new()
+			weight.node_index = bone_index
+			weight.bias = 1.0
+			vertex.weights = [weight]
+			self.vertices.append(vertex)
+		# End For
+		self._read_uv_and_faces(ltb, f, hdr.vert_count, hdr.max_bones_per_tri)
+		ltb.mt6_vert_sum += hdr.vert_count
+
+	func _read_skeletal_lod_fmt1(ltb, f: File, hdr: Dictionary):
 		# NewVertFormat == 1: gepacktes Multi-Bone-Blending, Stride haengt von
 		# MaxBonesPerVert ab (2/3/4 -> 32/36/40 Bytes; alles andere faellt wie
 		# im .bt-Template auf 36 zurueck).
@@ -314,7 +341,7 @@ class MeshLod:
 
 		for i in range(hdr.vert_count):
 			var vertex = Vertex.new()
-			vertex.location = dhnp.read_vector3(f)
+			vertex.location = ltb.read_vector3(f)
 
 			var blend_weights = []
 			for j in range(n_blend_floats):
@@ -324,7 +351,7 @@ class MeshLod:
 			for j in range(4):
 				bone_indices.append(f.get_8())  # gepackt [idx0..idx(n-1), 0-gepolstert]
 
-			vertex.normal = dhnp.read_vector3(f)
+			vertex.normal = ltb.read_vector3(f)
 
 			var n = 3
 			if max_bones == 2 or max_bones == 3 or max_bones == 4:
@@ -347,9 +374,9 @@ class MeshLod:
 
 			self.vertices.append(vertex)
 		# End For
-		self._read_uv_and_faces(dhnp, f, hdr.vert_count, hdr.face_count)
+		self._read_uv_and_faces(ltb, f, hdr.vert_count, hdr.face_count)
 
-	func _read_skeletal_lod_fmt0(dhnp, f: File, hdr: Dictionary, lod_start: int):
+	func _read_skeletal_lod_fmt0(ltb, f: File, hdr: Dictionary, lod_start: int):
 		# NewVertFormat == 0: ein Weight pro Vertex (BoneWeight ist laut
 		# .bt-Template-Kommentar immer 1.0), der echte Bone-Index kommt aus
 		# der BoneSet-Tabelle nach den Faces. Stride haengt von
@@ -357,7 +384,7 @@ class MeshLod:
 		var max_bones_per_tri = hdr.max_bones_per_tri
 		for i in range(hdr.vert_count):
 			var vertex = Vertex.new()
-			vertex.location = dhnp.read_vector3(f)
+			vertex.location = ltb.read_vector3(f)
 			if max_bones_per_tri == 1:
 				pass  # SkeletalVertex_Fmt0_24: kein BoneWeight/BoneIndex-Feld
 			elif max_bones_per_tri == 2:
@@ -365,21 +392,22 @@ class MeshLod:
 			else:
 				f.get_float()  # BoneWeight, immer 1.0
 				f.get_32()     # BoneIndex, Platzhalter (echter kommt via BoneSet)
-			vertex.normal = dhnp.read_vector3(f)
+			vertex.normal = ltb.read_vector3(f)
 			var weight = Weight.new()
 			weight.node_index = 0
 			weight.bias = 1.0
 			vertex.weights = [weight]
 			self.vertices.append(vertex)
 		# End For
-		self._read_uv_and_faces(dhnp, f, hdr.vert_count, hdr.face_count)
+		self._read_uv_and_faces(ltb, f, hdr.vert_count, hdr.face_count)
 
 		# BoneSet-Tabelle: vorhanden, wenn die uebrigen Bytes vor dem Ende von
 		# ObjSize wie "Anzahl + N*12-Byte-Eintraege" aussehen (bestaetigtes
 		# Muster, identisches 12-Byte-BoneSet-Struct wie beim normalen LTB-PC).
 		var bytes_read = f.get_position() - (lod_start + 8)
 		var padding_needed = hdr.obj_size - bytes_read
-		if padding_needed > 4 and (padding_needed - 4) % 12 == 0:
+		# >= 4: padding_needed == 4 ist eine leere BoneSet-Tabelle (Count 0), z.B. LTB wrap HEAD.LTB / TREE6.LTB (MaxBonesPerTri 0)
+		if padding_needed >= 4 and (padding_needed - 4) % 12 == 0:
 			var bone_set_count = f.get_32()
 			for i in range(bone_set_count):
 				var index_start = f.get_16()
@@ -404,9 +432,9 @@ class MeshLod:
 		elif padding_needed > 0:
 			f.seek(f.get_position() + padding_needed)
 
-	func read(dhnp, f: File):
+	func read(ltb, f: File):
 		var lod_start = f.get_position()
-		var hdr = self._read_lod_header(dhnp, f)
+		var hdr = self._read_lod_header(ltb, f)
 		self.vert_count = hdr.vert_count
 		self.face_count = hdr.face_count
 		self.max_bones_per_face = hdr.max_bones_per_tri
@@ -417,15 +445,17 @@ class MeshLod:
 		self.specular_scale = hdr.specular_scale
 
 		if hdr.mesh_type == MT_RIGID:
-			self._read_rigid_lod(dhnp, f, hdr)
+			self._read_rigid_lod(ltb, f, hdr)
 		elif hdr.mesh_type == MT_SKELETAL:
 			var new_vert_format = f.get_8()
 			if new_vert_format == 1:
-				self._read_skeletal_lod_fmt1(dhnp, f, hdr)
+				self._read_skeletal_lod_fmt1(ltb, f, hdr)
 			else:
-				self._read_skeletal_lod_fmt0(dhnp, f, hdr, lod_start)
+				self._read_skeletal_lod_fmt0(ltb, f, hdr, lod_start)
+		elif hdr.mesh_type == MT_MORPH:
+			self._read_morph_lod(ltb, f, hdr)
 		else:
-			print("  WARNUNG: unbehandelter DHNP-D3D-MeshType=" + str(hdr.mesh_type) + ", LOD-Payload wird uebersprungen")
+			print("  WARNUNG: unbehandelter LTB-wrap-D3D-MeshType=" + str(hdr.mesh_type) + ", LOD-Payload wird uebersprungen")
 
 		# Sicherheitsnetz: unabhaengig davon, wie die Payload oben interpretiert
 		# wurde, ist ObjSize die massgebliche Laenge dieses LODs (bestaetigt
@@ -441,15 +471,15 @@ class Piece:
 	var specular_scale = 0.0
 	var lods = []
 
-	func read(dhnp, f: File):
-		self.name = dhnp.read_string(f)
-		for i in range(dhnp.lod_count):
+	func read(ltb, f: File):
+		self.name = ltb.read_string(f)
+		for i in range(ltb.lod_count):
 			var lod = MeshLod.new()
-			lod.read(dhnp, f)
+			lod.read(ltb, f)
 			self.lods.append(lod)
 		# End For
 
-		# DHNPs D3D-Piece-Struct hat selbst keine Material-Index/Specular-
+		# LTB wraps D3D-Piece-Struct hat selbst keine Material-Index/Specular-
 		# Felder (anders als beim ABC-Body) -- die liegen pro LOD im
 		# LODHeader. Wie in reader_ltb_pc.py wird LOD[0]s Wert auf die
 		# Piece hochgereicht.
@@ -472,16 +502,16 @@ class LTNode:
 	var parent = null  # weakref(), um Referenzzyklus mit children zu vermeiden
 	var children = []
 
-	func read(dhnp, f: File):
-		self.name = dhnp.read_string(f)
+	func read(ltb, f: File):
+		self.name = ltb.read_string(f)
 		self.index = f.get_16()
 		# HINWEIS: Python-Referenz liest hier ein VORZEICHENBEHAFTETES Byte
 		# (unpack('b', f)); Godots File.get_8() ist immer unsigned. Gleiche,
 		# bereits bestehende und bewusst nicht behobene Diskrepanz wie in
-		# ABCReader/Models/ABC.gd. Ohne Belang hier, da flags fuer DHNP-D3D
+		# ABCReader/Models/ABC.gd. Ohne Belang hier, da flags fuer LTB-wrap-D3D
 		# an keiner Stelle per Bitmaske ausgewertet wird.
 		self.flags = f.get_8()
-		self.bind_matrix = dhnp.read_matrix(f)
+		self.bind_matrix = ltb.read_matrix(f)
 		self.child_count = f.get_32()
 
 	static func link_children(node_list, node_index, parent):
@@ -503,8 +533,8 @@ class WeightSet:
 	var name = ""
 	var node_weights = []
 
-	func read(dhnp, f: File):
-		self.name = dhnp.read_string(f)
+	func read(ltb, f: File):
+		self.name = ltb.read_string(f)
 		var node_count = f.get_32()
 		for i in range(node_count):
 			self.node_weights.append(f.get_float())
@@ -521,13 +551,13 @@ class LTTransform:
 	var location = Vector3()
 	var rotation = Quat()
 
-	func read(dhnp, f: File):
-		self.location = dhnp.read_vector3(f)
-		self.rotation = dhnp.read_quat(f)
+	func read(ltb, f: File):
+		self.location = ltb.read_vector3(f)
+		self.rotation = ltb.read_quat(f)
 
-	func read_anim(dhnp, f: File):
-		self.read(dhnp, f)
-		if dhnp.version >= 13:
+	func read_anim(ltb, f: File):
+		self.read(ltb, f)
+		if ltb.version >= 13:
 			f.seek(f.get_position() + 8)  # zwei unbekannte Floats (nur v13, nur AnimTransform)
 # End LTTransform
 
@@ -537,12 +567,12 @@ class ChildModel:
 	var build_number = 0
 	var transforms = []
 
-	func read(dhnp, f: File):
-		self.name = dhnp.read_string(f)
+	func read(ltb, f: File):
+		self.name = ltb.read_string(f)
 		self.build_number = f.get_32()
-		for i in range(dhnp.node_count):
+		for i in range(ltb.node_count):
 			var t = LTTransform.new()
-			t.read(dhnp, f)
+			t.read(ltb, f)
 			self.transforms.append(t)
 # End ChildModel
 
@@ -551,9 +581,9 @@ class LTKeyframe:
 	var time = 0
 	var command_string = ""
 
-	func read(dhnp, f: File):
+	func read(ltb, f: File):
 		self.time = f.get_32()
-		self.command_string = dhnp.read_string(f)
+		self.command_string = ltb.read_string(f)
 # End LTKeyframe
 
 
@@ -564,11 +594,13 @@ class LTAnim:
 	var keyframe_count = 0
 	var keyframes = []
 	var node_keyframes = []
+	# MeshType-6-Morphdaten: je Keyframe eine Liste von mt6_vert_sum Vector3 (nach den Node-Tracks)
+	var morph_frames = []
 
-	func read(dhnp, f: File):
-		self.extents = dhnp.read_vector3(f)
-		self.name = dhnp.read_string(f)
-		var val = f.get_32()  # "Val" per ABC_V9-134.bt / reader_ltb_dhnp.py
+	func read(ltb, f: File):
+		self.extents = ltb.read_vector3(f)
+		self.name = ltb.read_string(f)
+		var val = f.get_32()  # "Val" per ABC_V9-13.bt / reader_ltb_dhnp.py
 
 		# BUGFIX (2026-09, Sten/Claude, gefunden beim Testen von echten
 		# v11/v12/v13-Dateien mit echten Animationen -- vorher hing/fror
@@ -590,9 +622,12 @@ class LTAnim:
 		# die echte KeyFrameCount (bei v12/v13 mit einem UnkInt davor);
 		# sonst IST Val selbst die KeyFrameCount und es folgt nichts
 		# weiter.
-		if val == -1:
-			if dhnp.version >= 12:
-				self.interpolation_time = f.get_32()
+		# ERGAENZUNG (2026-11, ABC_V9-13.bt v1.7, deathbase.abc mit Val=18): ab Version 12 folgen InterpolationTime und
+		# KeyFrameCount IMMER, auch bei Val != -1. In allen gescannten Body-13-Dateien ist Val == -1, das aendert sie nicht.
+		if ltb.version >= 12:
+			self.interpolation_time = f.get_32()
+			self.keyframe_count = f.get_32()
+		elif val == -1:
 			self.keyframe_count = f.get_32()
 		else:
 			self.interpolation_time = 200
@@ -601,22 +636,34 @@ class LTAnim:
 
 		for i in range(self.keyframe_count):
 			var kf = LTKeyframe.new()
-			kf.read(dhnp, f)
+			kf.read(ltb, f)
 			self.keyframes.append(kf)
 		# End For
 
-		for i in range(dhnp.node_count):
-			if dhnp.version >= 13:
+		for i in range(ltb.node_count):
+			if ltb.version >= 13:
 				f.seek(f.get_position() + 4)  # -1-Marker
 
 			var per_node_transforms = []
 			for j in range(self.keyframe_count):
 				var t = LTTransform.new()
-				t.read_anim(dhnp, f)
+				t.read_anim(ltb, f)
 				per_node_transforms.append(t)
 			# End For
 			self.node_keyframes.append(per_node_transforms)
 		# End For
+
+		# MeshType-6-Morphdaten (exakt belegt an shrub1, crossingsign3, bush1): nach den Node-Tracks folgen
+		# KeyFrameCount x Summe(VertCount aller MT6-LODs) x float3.
+		if ltb.mt6_vert_sum > 0:
+			for k in range(self.keyframe_count):
+				var frame = []
+				for v in range(ltb.mt6_vert_sum):
+					frame.append(ltb.read_vector3(f))
+				# End For
+				self.morph_frames.append(frame)
+			# End For
+		# End If
 # End LTAnim
 
 
@@ -626,11 +673,11 @@ class Socket:
 	var rotation = Quat()
 	var location = Vector3()
 
-	func read(dhnp, f: File):
+	func read(ltb, f: File):
 		self.node_index = f.get_32()
-		self.name = dhnp.read_string(f)
-		self.rotation = dhnp.read_quat(f)
-		self.location = dhnp.read_vector3(f)
+		self.name = ltb.read_string(f)
+		self.rotation = ltb.read_quat(f)
+		self.location = ltb.read_vector3(f)
 # End Socket
 
 
@@ -639,8 +686,8 @@ class AnimBinding:
 	var extents = Vector3()
 	var origin = Vector3()
 
-	func read(dhnp, f: File):
-		self.name = dhnp.read_string(f)
-		self.extents = dhnp.read_vector3(f)
-		self.origin = dhnp.read_vector3(f)
+	func read(ltb, f: File):
+		self.name = ltb.read_string(f)
+		self.extents = ltb.read_vector3(f)
+		self.origin = ltb.read_vector3(f)
 # End AnimBinding

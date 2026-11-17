@@ -3,8 +3,12 @@ class_name LTB_PC
 
 const BinPrim = preload("res://Addons/LTDatReader/BinaryReadPrimitives.gd")
 
-# PC LTB Model Reader - EXACT implementation of pc_ltb.bt
-# Version 9, FileType 1 (D3D)
+# PC LTB Model Reader - Implementierung von pc_ltb.bt / LTB_PC_Model18_25.bt
+# Raw: FileType 1 (D3D), Container 9, MeshVersion 18, 20..25 (v19 ohne Sample; v24 nur aus dem Source).
+# Es werden nur Pieces und Nodes gelesen (Viewer ohne Animation). Versionsgrenzen (an ~1800 Dateien belegt):
+#   AnimationData im Header ab v23, RenderPriority im LOD ab v20, NodesUsed im LOD ab v22,
+#   OBB-Groesse 44 (v18) / 64 (v23) / 68 (v24+).
+# Mit read_wrapped() werden auch die LTB-wrap-Bodies 14..17 (Wrapper, FileType 1) gelesen: gleiche Pieces und Nodes.
 
 const MT_RIGID = 4
 const MT_SKELETAL = 5
@@ -28,6 +32,7 @@ const CMP_Relevant_Rot16 = 3
 var name = ""
 var version = 0
 var file_type = 0
+var mesh_version = 0  # raw: MeshVersion (18..25), wrapped: Body-Version (14..17)
 var pieces = []
 var nodes = []
 var animations = []
@@ -46,7 +51,11 @@ func read(f: File):
 	for i in range(4):
 		f.get_32()
 	
-	var mesh_version = f.get_32()
+	mesh_version = f.get_32()
+	if mesh_version == 19:
+		return _make_response(IMPORT_RETURN.ERROR, "MeshVersion 19: kein Sample, Layout unbekannt")
+	if mesh_version < 18 or mesh_version > 25:
+		return _make_response(IMPORT_RETURN.ERROR, "Nicht unterstuetzte MeshVersion " + str(mesh_version) + " (unterstuetzt: 18, 20..25)")
 	
 	# Read all counts (EXACTLY as in template)
 	var keyframe_count = f.get_32()
@@ -63,7 +72,9 @@ func read(f: File):
 	var string_count = f.get_32()
 	var string_length = f.get_32()
 	var vert_anim_data_size = f.get_32()
-	var animation_data = f.get_32()
+	var animation_data = 0
+	if mesh_version >= 23:
+		animation_data = f.get_32()  # Header-Feld erst ab v23
 	
 	var command_string = read_string(f)
 	var radius = f.get_float()
@@ -144,10 +155,95 @@ func read(f: File):
 	
 	return _make_response(IMPORT_RETURN.SUCCESS)
 
+# Liest ein LTB-wrap-Modell mit Body-Version 14..17 (FileType 1, Container 3 oder 9; "LTBHeader"-Wrapper, 7 Sections).
+# Pieces und Nodes sind identisch zu raw v18 (ohne RenderPriority und NodesUsed). Body 13 (D3D) liest LTB_Wrap_D3D.gd,
+# Container 8 (Body-13-Hybrid mit PC-Pieces, nur EXITONLYSIGN) wird nicht unterstuetzt.
+func read_wrapped(f: File):
+	print("=== LTB wrap Body 14-17 Reader ===")
+	f.seek(0)
+	var text_len = f.get_16()
+	f.seek(2 + text_len)
+	var first_section = f.get_32()
+	file_type = f.get_16() & 0xFF
+	version = f.get_16()  # Container-Version
+	for i in range(4):
+		f.get_32()
+
+	# Section-Tabelle: Name -> Beginn des Section-Inhalts (hinter Name und NextSection)
+	var sections = {}
+	var next_offset = first_section
+	var guard = 0
+	while next_offset != 0xFFFFFFFF and guard < 16:
+		guard += 1
+		f.seek(next_offset)
+		var name_len = f.get_16()
+		var section_name = f.get_buffer(name_len).get_string_from_ascii()
+		var next_section = f.get_32()
+		sections[section_name] = f.get_position()
+		if next_section != 0xFFFFFFFF and next_section <= next_offset:
+			break
+		next_offset = next_section
+	for required in ["Header", "Pieces", "Nodes"]:
+		if not sections.has(required):
+			return _make_response(IMPORT_RETURN.ERROR, "Section fehlt oder Kette abgeschnitten: " + required)
+
+	# Header-Body: Version, 11 Zaehler, Unknown, StringCount, StringLength, CommandString, Radius, OBBCount, OBBs (44 Byte)
+	f.seek(sections["Header"])
+	mesh_version = f.get_32()
+	if mesh_version < 14 or mesh_version > 17:
+		return _make_response(IMPORT_RETURN.ERROR, "Body-Version " + str(mesh_version) + " nicht unterstuetzt (14..17; Body 13 liest LTB_Wrap_D3D.gd)")
+	var counts = []
+	for i in range(11):
+		counts.append(f.get_32())  # KeyFrames, Anims, Nodes, Pieces, ChildModels, Faces, Verts, VertWeights, LODs, Sockets, WeightSets
+	var node_count = counts[2]
+	var lod_count = counts[8]
+	f.get_32()  # Unknown
+	f.get_32()  # StringCount
+	f.get_32()  # StringLength
+	var command_string = read_string(f)
+	var radius = f.get_float()
+	var obb_count = f.get_32()
+	if node_count < 0 or node_count > 10000 or counts[3] < 0 or counts[3] > 10000 or lod_count < 0 or lod_count > 100 or obb_count < 0 or obb_count > 1000:
+		return _make_response(IMPORT_RETURN.ERROR, "Unplausible Zaehler im Header")
+	print("Body v", mesh_version, " Container=", version, " Nodes=", node_count, " Pieces=", counts[3], " LODs=", lod_count)
+
+	# Pieces
+	f.seek(sections["Pieces"])
+	var piece_count = f.get_32()
+	if piece_count < 0 or piece_count > 10000:
+		return _make_response(IMPORT_RETURN.ERROR, "Invalid piece_count: " + str(piece_count))
+	for i in range(piece_count):
+		if f.eof_reached():
+			return _make_response(IMPORT_RETURN.ERROR, "Unexpected EOF at piece " + str(i))
+		var piece = PieceHeader.new()
+		if not piece.read(self, f, lod_count):
+			return _make_response(IMPORT_RETURN.ERROR, "Failed reading piece " + str(i))
+		pieces.append(piece)
+
+	# Nodes (flache Liste, Baum aus Reihenfolge + ChildCount)
+	f.seek(sections["Nodes"])
+	if node_count > 0:
+		for i in range(node_count):
+			if f.eof_reached():
+				return _make_response(IMPORT_RETURN.ERROR, "Unexpected EOF at node " + str(i))
+			var node = LTNode.new()
+			if not node.read(self, f):
+				return _make_response(IMPORT_RETURN.ERROR, "Failed reading node " + str(i))
+			nodes.append(node)
+		LTNode.link_children(nodes, 0, null)
+
+	name = "LTB_Wrap_PC_Model"
+	return _make_response(IMPORT_RETURN.SUCCESS)
+
 func _skip_obb(f: File):
-	# OBB = LTMatrix = 4 * LTQuat = 4 * 4 floats = 16 floats
-	for i in range(16):
-		f.get_float()
+	# OBB-Groesse je Version: v18 44 Byte (Position, Dims, Quaternion, NodeIndex; v19-22 Vermutung), v23 64 Byte
+	# (Position, Size, Basis[3], NodeIndex), v24+ 68 Byte (+Radius). Nur v18 ist an Dateien belegt, v23/v24+ aus dem Source.
+	var size = 44
+	if mesh_version >= 24:
+		size = 68
+	elif mesh_version >= 23:
+		size = 64
+	f.seek(f.get_position() + size)
 
 func read_string(f: File) -> String:
 	var length = f.get_16()
@@ -218,6 +314,7 @@ class PieceHeader:
 class MeshLod:
 	var texture_indices = []
 	var mesh_type = 0
+	var bone_index = -1  # Rigid: Node des Pieces; VertexAnimated: AnimNodeIdx (Node mit den Vertexlisten der Animation)
 	var vertices = []
 	var faces = []
 	
@@ -229,7 +326,9 @@ class MeshLod:
 			texture_indices.append(f.get_32())
 		
 		var render_style = f.get_32()
-		var render_priority = f.get_8()
+		var render_priority = 0
+		if ltb.mesh_version >= 20:
+			render_priority = f.get_8()
 		
 		# Now comes the Piece data (inline in LOD)
 		mesh_type = f.get_32()  # PieceType
@@ -242,7 +341,9 @@ class MeshLod:
 			# DON'T return here! Continue to NodesUsed below
 		else:
 			# Common data for non-null meshes
+			var obj_start = f.get_position()  # Position des ObjSize-Feldes: Piece-Ende = obj_start + 4 + obj_size
 			var obj_size = f.get_32()
+			var piece_end = obj_start + 4 + obj_size
 			var vert_count = f.get_32()
 			var face_count = f.get_32()
 			var max_bones_per_face = f.get_32()
@@ -264,13 +365,21 @@ class MeshLod:
 			elif mesh_type == ltb.MT_SKELETAL:
 				if not _read_skeletal(ltb, f, vert_count, face_count, max_bones_per_face, max_bones_per_vert):
 					return false
+			elif mesh_type == ltb.MT_VERTEX_ANIMATED:
+				if not _read_vertex_animated(ltb, f, vert_count, max_bones_per_face):
+					return false
 			else:
 				print("WARNING: Unsupported mesh type: ", mesh_type)
+
+			# ObjSize ist verbindlich (Layout-Ende laut Datei): ueberspringt auch Reste, die wir nicht lesen
+			# (VertexAnimated: DupMap; Skeletal mit Matrix-Palette bei MaxBonesPerVert <= 1; unbekannte Typen).
+			f.seek(piece_end)
 		
-		# Read NodesUsed (AFTER piece, for ALL mesh types including NULL!)
-		var nodes_used_count = f.get_8()
-		for i in range(nodes_used_count):
-			f.get_8()
+		# NodesUsed (AFTER piece, for ALL mesh types including NULL) -- erst ab v22
+		if ltb.mesh_version >= 22:
+			var nodes_used_count = f.get_8()
+			for i in range(nodes_used_count):
+				f.get_8()
 		
 		return true
 	
@@ -280,6 +389,7 @@ class MeshLod:
 			data_types.append(f.get_32())
 		
 		var bone = f.get_32()
+		bone_index = bone
 		
 		# Read vertices per stream
 		for stream in range(4):
@@ -320,6 +430,49 @@ class MeshLod:
 			faces[int(i / 3)].indices.append(idx)
 		
 		# NodesUsed wird NICHT hier gelesen, sondern in LOD.read()!
+		return true
+
+	func _read_vertex_animated(ltb, f: File, vert_count: int, poly_count: int) -> bool:
+		# Jupiter CD3DVAMesh::Load: die gemeinsamen Kopffelder heissen hier ObjSize, VertCount, UnDupVertCount (=FaceCount),
+		# PolyCount (=MaxBonesPerFace), MaxBonesPerTri (=MaxBonesPerVert). Danach: uint32 MaxBonesPerVert, DataType[4],
+		# AnimNodeIdx, BoneEffector, Vertices je Stream, uint16 Index[PolyCount*3], uint32 DupMapCount, DupMap[] (per seek uebersprungen).
+		# Das Basismesh ist das Bild vor jeder Animation; die Vertexlisten je Keyframe liegen im Anim-Node AnimNodeIdx.
+		f.get_32()  # MaxBonesPerVert
+		var data_types = []
+		for i in range(4):
+			data_types.append(f.get_32())
+		bone_index = f.get_32()  # AnimNodeIdx
+		f.get_32()  # BoneEffector
+		for stream in range(4):
+			if data_types[stream] == 0:
+				continue
+			for v in range(vert_count):
+				if f.eof_reached():
+					return false
+				var vertex = Vertex.new()
+				if data_types[stream] & ltb.VTX_Position:
+					vertex.location = ltb.read_vector3(f)
+				if data_types[stream] & ltb.VTX_Normal:
+					vertex.normal = ltb.read_vector3(f)
+				if data_types[stream] & ltb.VTX_Colour:
+					vertex.color = f.get_32()
+				if data_types[stream] & ltb.VTX_UV_Sets_1:
+					vertex.uv1 = ltb.read_vector2(f)
+				if data_types[stream] & ltb.VTX_UV_Sets_2:
+					vertex.uv2 = ltb.read_vector2(f)
+				if data_types[stream] & ltb.VTX_UV_Sets_3:
+					vertex.uv3 = ltb.read_vector2(f)
+				if data_types[stream] & ltb.VTX_UV_Sets_4:
+					vertex.uv4 = ltb.read_vector2(f)
+				if data_types[stream] & ltb.VTX_BasisVector:
+					vertex.basis_s = ltb.read_vector3(f)
+					vertex.basis_t = ltb.read_vector3(f)
+				vertices.append(vertex)
+		for i in range(poly_count * 3):
+			var idx = f.get_16()
+			if i % 3 == 0:
+				faces.append(Face.new())
+			faces[int(i / 3)].indices.append(idx)
 		return true
 
 	func _read_skeletal(ltb, f: File, vert_count: int, face_count: int, max_bones_face: int, max_bones_vert: int) -> bool:
@@ -394,8 +547,49 @@ class MeshLod:
 				for i in range(reindexed_bone_count):
 					f.get_32()
 			
-			# Skip reading for now - just skip the data
-			print("WARNING: Matrix palette skeletal mesh - skipping vertex data")
+			# Matrix-Palette-Modus (an Dateien belegt fuer MaxBonesPerVert 2..4): Position, (MaxBonesPerVert-1) Blend-Floats,
+			# 4 x uint8 Bone-Index (liegen in MinBone..MaxBone), dann Normale, UVs ...; danach Indizes, keine BoneSets.
+			if max_bones_vert < 2:
+				# MaxBonesPerVert <= 1 mit Matrix-Palette kommt in keiner Datei vor (Layout unbekannt) -> per ObjSize uebersprungen
+				print("WARNING: Matrix palette skeletal mesh with MaxBonesPerVert <= 1 - skipping vertex data")
+				return true
+			for stream in range(4):
+				if data_types[stream] == 0:
+					continue
+				for v in range(vert_count):
+					if f.eof_reached():
+						return false
+					var vertex = Vertex.new()
+					if data_types[stream] & ltb.VTX_Position:
+						vertex.location = ltb.read_vector3(f)
+						vertex.blend1 = f.get_float()
+						if max_bones_vert >= 3:
+							vertex.blend2 = f.get_float()
+						if max_bones_vert >= 4:
+							vertex.blend3 = f.get_float()
+						for j in range(4):
+							vertex.bone_indices.append(f.get_8())
+					if data_types[stream] & ltb.VTX_Normal:
+						vertex.normal = ltb.read_vector3(f)
+					if data_types[stream] & ltb.VTX_Colour:
+						vertex.color = f.get_32()
+					if data_types[stream] & ltb.VTX_UV_Sets_1:
+						vertex.uv1 = ltb.read_vector2(f)
+					if data_types[stream] & ltb.VTX_UV_Sets_2:
+						vertex.uv2 = ltb.read_vector2(f)
+					if data_types[stream] & ltb.VTX_UV_Sets_3:
+						vertex.uv3 = ltb.read_vector2(f)
+					if data_types[stream] & ltb.VTX_UV_Sets_4:
+						vertex.uv4 = ltb.read_vector2(f)
+					if data_types[stream] & ltb.VTX_BasisVector:
+						vertex.basis_s = ltb.read_vector3(f)
+						vertex.basis_t = ltb.read_vector3(f)
+					vertices.append(vertex)
+			for i in range(face_count * 3):
+				var idx = f.get_16()
+				if i % 3 == 0:
+					faces.append(Face.new())
+				faces[int(i / 3)].indices.append(idx)
 		
 		# NodesUsed wird NICHT hier gelesen!
 		return true
@@ -413,6 +607,7 @@ class Vertex:
 	var blend1 = 0.0
 	var blend2 = 0.0
 	var blend3 = 0.0
+	var bone_indices = []  # Matrix-Palette: 4 Bone-Indizes je Vertex
 
 class Face:
 	var indices = []

@@ -5,7 +5,8 @@ extends Reference
 # PC LTB Model Builder - Converts LTB_PC data to Godot meshes
 # For NOLF2, Tron 2.0 PC Character Models
 
-func build(source_file, options):
+# wrapped = true: LTB-wrap-Modell mit Body-Version 14..17 ("LTBHeader"-Wrapper) statt raw LTB 18..25
+func build(source_file, options, wrapped = false):
 	var file = File.new()
 	if file.open(source_file, File.READ) != OK:
 		print("Failed to open " + source_file)
@@ -15,7 +16,11 @@ func build(source_file, options):
 	
 	# Read the model using LTB_PC reader
 	var ltb_pc = preload("res://Addons/LTBReader/Models/LTB_PC.gd").new()
-	var response = ltb_pc.read(file)
+	var response = null
+	if wrapped:
+		response = ltb_pc.read_wrapped(file)
+	else:
+		response = ltb_pc.read(file)
 	
 	if response.code != ltb_pc.IMPORT_RETURN.SUCCESS:
 		print("Failed to read PC LTB file: ", response.message)

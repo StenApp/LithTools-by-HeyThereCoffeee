@@ -6,7 +6,7 @@ var loaded_file: LoadedFile
 
 var _model_builder = preload("res://Addons/ABCReader/ModelBuilder.gd").new()
 # Nicht mehr WorldBuilder.gd direkt: die Entscheidung "Level oder Modell (PC/
-# PS2/DHNP)" steckt jetzt in ModelFormatDispatcher.gd, WorldBuilder baut nur
+# PS2/LTB wrap)" steckt jetzt in ModelFormatDispatcher.gd, WorldBuilder baut nur
 # noch bereits identifizierte Level-Dateien.
 var _format_dispatcher = preload("res://Addons/LTDatReader/ModelFormatDispatcher.gd").new()
 var _texture_builder = preload("res://Addons/DTXReader/TextureBuilder.gd").new()
@@ -93,7 +93,7 @@ func _threaded_load(path):
 		scene = self._format_dispatcher.build(path, [])
 		raw_file = scene
 		var btype = self._format_dispatcher.last_build_type
-		if btype == "model_ps2" or btype == "model_pc" or btype == "model_dhnp":
+		if btype == "model_ps2" or btype == "model_pc" or btype == "model_ltb_wrap":
 			file_mode = LoadedFile.FILE_ABC
 	elif ".abc" in path.to_lower():
 		scene = self._model_builder.build(path, [])

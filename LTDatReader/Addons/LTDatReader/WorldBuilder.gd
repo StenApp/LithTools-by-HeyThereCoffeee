@@ -13,7 +13,7 @@ var texture_path = ""
 var debug_file = null
 
 # Immer "level" -- WorldBuilder baut nur noch Level-Szenen. Die Werte
-# "model_ps2"/"model_pc"/"model_dhnp" existieren jetzt nur noch auf
+# "model_ps2"/"model_pc"/"model_ltb_wrap" existieren jetzt nur noch auf
 # ModelFormatDispatcher.gd.last_build_type, nicht mehr hier.
 var last_build_type = "level"
 
@@ -77,7 +77,7 @@ func build(source_file, options):
 
 	# WorldBuilder baut ausschliesslich echte Level-Szenen (DAT oder
 	# PS2-Level-LTB). Die Entscheidung "ist diese Datei ueberhaupt ein Level,
-	# oder tatsaechlich ein Model-LTB (PC/PS2) bzw. ein DHNP-gewrapptes Modell"
+	# oder tatsaechlich ein Model-LTB (PC/PS2) bzw. ein LTB-wrap-gewrapptes Modell"
 	# ist NICHT mehr Aufgabe von WorldBuilder -- das entscheidet jetzt
 	# ausschliesslich ModelFormatDispatcher.gd, der als einziger vorgesehener
 	# Aufrufer diese Funktion nur noch fuer bereits identifizierte

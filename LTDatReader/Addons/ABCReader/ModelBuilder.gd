@@ -9,10 +9,10 @@ var cheat_skeleton = null  # lazy statt eager Skeleton.new() - siehe Fix bei der
 var model = null
 
 func build(source_file, options, start_offset : int = 0):
-	# start_offset != 0 heisst: wir werden ueber den DHNP-LTB-Wrapper
-	# gerufen (LTBImporter.gd/DHNPWrapper.gd), der Body ist also
+	# start_offset != 0 heisst: wir werden ueber den LTB-wrap-Wrapper
+	# gerufen (LTBImporter.gd/LTBWrapper.gd), der Body ist also
 	# schon als "modernes" ABC (v9-13) identifiziert -> kein ABC6-
-	# Fallback-Versuch noetig/sinnvoll, da v6 nie in DHNP vorkommt.
+	# Fallback-Versuch noetig/sinnvoll, da v6 nie in LTB wrap vorkommt.
 	var file = File.new()
 	if file.open(source_file, File.READ) != OK:
 		print("Failed to open " + source_file)
@@ -33,7 +33,7 @@ func build(source_file, options, start_offset : int = 0):
 	if response.code == model.IMPORT_RETURN.ERROR:
 		if start_offset != 0:
 			file.close()
-			print("IMPORT ERROR (DHNP ABC-Body): " + str(response.message))
+			print("IMPORT ERROR (LTB wrap ABC body): " + str(response.message))
 			return FAILED
 		print("Checking ABC version 6 reader!")
 		# Try ABC 6

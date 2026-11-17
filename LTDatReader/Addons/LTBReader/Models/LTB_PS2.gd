@@ -513,7 +513,7 @@ func _read_animations(file: File, offset: int, count: int, hash_magic: int):
 
 		# "Translation" -- vorher gelesen und komplett verworfen
 		# (var unknown_vector, nie benutzt). Bestaetigt gegen reader_ltb_ps2.py:
-		# PS2 hat keine eigene AnimBindings-Section wie PC/DHNP-D3D/ABC;
+		# PS2 hat keine eigene AnimBindings-Section wie PC/LTB-wrap-D3D/ABC;
 		# Extents+Translation stecken dafuer inline hier in jedem Animation-
 		# Eintrag. Jetzt behalten (LTAnimation.origin) UND zusaetzlich als
 		# AnimBinding synthetisiert, damit dieselbe Datenform wie bei den
@@ -775,7 +775,7 @@ class ChildModel:
 	var name = ""
 
 # PS2 hat KEINE eigene AnimBindings-Section (weder die "Haupt"- noch die
-# ChildModel-Erweiterung, die ABC PC/DHNP-D3D/plain LTB PC haben) --
+# ChildModel-Erweiterung, die ABC PC/LTB-wrap-D3D/plain LTB PC haben) --
 # bestaetigt gegen das user-seitige .bt-Template: die Parsierung endet dort
 # exakt nach Sockets. Extents+Translation stecken statt dessen direkt inline
 # in jedem Animation-Eintrag (siehe LTAnimation.origin). Dieses Struct und
@@ -791,7 +791,7 @@ class LTAnimation:
 	var name = ""
 	var extents = Vector3()
 	# "Translation" per pc_ltb.bt / reader_ltb_ps2.py's AnimBinding-Origin --
-	# steht bei PS2 (anders als PC/DHNP-D3D/ABC) inline in jedem Animation-
+	# steht bei PS2 (anders als PC/LTB-wrap-D3D/ABC) inline in jedem Animation-
 	# Eintrag statt in einer separaten AnimBindings-Section. Wurde hier
 	# vorher gelesen und komplett verworfen (siehe _read_animations()).
 	var origin = Vector3()
