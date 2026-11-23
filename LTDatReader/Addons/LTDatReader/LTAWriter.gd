@@ -380,6 +380,8 @@ class LTAWriter:
 				
 				for prop in world_object.properties:
 					var data = prop.get_lta_property_data()
+					if data == null:
+						continue
 					
 					if data[1] == "Name":
 						label = data[2]
@@ -680,6 +682,9 @@ class LTAWriter:
 					use_effect_name = agg_effect_name
 					use_effect_param = agg_effect_param
 					use_invisible = all_invisible_dtx
+					# v66 (NOLF1 PC/PS2): Bit 2 = INVISIBLE; alle Faces muessen es haben
+					if model.version == 66 and (agg_flags_and & (1<<2)) != 0:
+						use_invisible = true
 				else:
 					use_flags = surface.flags
 					use_flags_and = surface.flags
@@ -692,6 +697,8 @@ class LTAWriter:
 					if tidx >= 0 and tidx < world_model.texture_names.size():
 						tname = world_model.texture_names[tidx].name
 					use_invisible = ("invisible" in tname.to_lower())
+					if model.version == 66 and (surface.flags & (1<<2)) != 0:
+						use_invisible = true
 
 				prop_list.create_prop_entry('bool', 'Solid', int( use_flags & (1<<0) != 0 ))
 				prop_list.create_prop_entry('bool', 'Nonexistant', int( use_flags & (1<<1) != 0 ))

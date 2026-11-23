@@ -546,7 +546,7 @@ class LTB_PS2:
 		func read(ltb: LTB_PS2, f: File):
 			self.name = ltb.read_string(f)
 			self.unk_int_1 = f.get_32()
-			self.unk_int_2 = f.get_32()
+			# PS2: Name, u32, u16, Center, Dims (30 Byte) - es gibt kein zweites u32
 			self.unk_short = f.get_16()
 			
 			self.center = ltb.read_vector3(f)
