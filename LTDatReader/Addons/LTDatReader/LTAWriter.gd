@@ -483,7 +483,36 @@ class LTAWriter:
 			var allow_multi_edit_polies = false
 			if world_model.world_name != "PhysicsBSP":
 				allow_multi_edit_polies = true
-				
+
+			# Flag-Aggregation fuer Multi-Face-Brushes (nicht-PhysicsBSP).
+			# OR: Property gilt, wenn irgendeine Face sie hat.
+			# AND (nur NOSUBDIV): Subdivide aus nur wenn alle Faces NOSUBDIV haben.
+			var agg_flags = 0
+			var agg_flags_and = 0xFFFFFFFF
+			var agg_detail_level = 0
+			var agg_use_effects = false
+			var agg_effect_name = ""
+			var agg_effect_param = ""
+			var all_invisible_dtx = true
+
+			if allow_multi_edit_polies:
+				for check_poly in world_model.polies:
+					var s = world_model.surfaces[check_poly.surface_index]
+					agg_flags |= s.flags
+					agg_flags_and &= s.flags
+					if "detail_level" in s:
+						agg_detail_level = max(agg_detail_level, s.detail_level)
+					if s.use_effects == 1:
+						agg_use_effects = true
+						agg_effect_name = s.effect_name
+						agg_effect_param = s.effect_param
+					var check_tex_idx = check_poly.texture_index if "texture_index" in check_poly else s.texture_index
+					var check_tex_name = ""
+					if check_tex_idx >= 0 and check_tex_idx < world_model.texture_names.size():
+						check_tex_name = world_model.texture_names[check_tex_idx].name
+					if not ("invisible" in check_tex_name.to_lower()):
+						all_invisible_dtx = false
+			
 			var running_face_index = 0
 			
 			var polyhedron = polyhedron_list.create_child('polyhedron')
@@ -634,54 +663,62 @@ class LTAWriter:
 				var rot_data = rot_prop.create_child('data')
 				rot_data.create_eulerangles_node(Vector3(0.0, 0.0, 0.0))
 				
-				# Holy heck!
-				prop_list.create_prop_entry('bool', 'Solid', int( surface.flags & (1<<0) != 0 ))
-				prop_list.create_prop_entry('bool', 'Nonexistant', int( surface.flags & (1<<1) != 0 ))
-				#prop_list.create_prop_entry('bool', 'Invisible', int( surface.flags & (1<<2) != 0 ))
-				#Fix for translucent world models:
-				# Invisible just if all Faces of the WorldModel have Invisible.dtx
-				var all_invisible_dtx = true
-				for check_poly in world_model.polies:
-					var check_tex_idx = check_poly.texture_index if "texture_index" in check_poly else world_model.surfaces[check_poly.surface_index].texture_index
-					var check_tex_name = ""
-					if check_tex_idx >= 0 and check_tex_idx < world_model.texture_names.size():
-						check_tex_name = world_model.texture_names[check_tex_idx].name
-					if not ("invisible" in check_tex_name.to_lower()):
-						all_invisible_dtx = false
-						break
+				# PhysicsBSP: Properties nur von dieser einen Surface.
+				# Andere WorldModels: voraggregierte OR/AND-Flags ueber alle Surfaces.
+				var use_flags
+				var use_flags_and
+				var use_detail
+				var use_effects
+				var use_effect_name
+				var use_effect_param
+				var use_invisible
+				if allow_multi_edit_polies:
+					use_flags = agg_flags
+					use_flags_and = agg_flags_and
+					use_detail = agg_detail_level
+					use_effects = agg_use_effects
+					use_effect_name = agg_effect_name
+					use_effect_param = agg_effect_param
+					use_invisible = all_invisible_dtx
+				else:
+					use_flags = surface.flags
+					use_flags_and = surface.flags
+					use_detail = surface.detail_level if "detail_level" in surface else 0
+					use_effects = (surface.use_effects == 1)
+					use_effect_name = surface.effect_name
+					use_effect_param = surface.effect_param
+					var tidx = poly.texture_index if "texture_index" in poly else surface.texture_index
+					var tname = ""
+					if tidx >= 0 and tidx < world_model.texture_names.size():
+						tname = world_model.texture_names[tidx].name
+					use_invisible = ("invisible" in tname.to_lower())
 
-				prop_list.create_prop_entry('bool', 'Invisible', int(all_invisible_dtx))
-				
-				prop_list.create_prop_entry('bool', 'Translucent', int( surface.flags & (1<<3) != 0 ))
-				prop_list.create_prop_entry('bool', 'SkyPortal', int( surface.flags & (1<<4) != 0 ))
-				prop_list.create_prop_entry('bool', 'FullyBright', int( surface.flags & (1<<5) != 0 ))
-				prop_list.create_prop_entry('bool', 'FlatShade', int( surface.flags & (1<<6) != 0 ))
-				prop_list.create_prop_entry('bool', 'GouraudShade', int( surface.flags & (1<<12) != 0 ))
-				prop_list.create_prop_entry('bool', 'LightMap', int( surface.flags & (1<<7) != 0 ))
-				prop_list.create_prop_entry('bool', 'Subdivide', int( surface.flags & (1<<8) == 0 )) # Flipped!
-				prop_list.create_prop_entry('bool', 'HullMaker', int( surface.flags & (1<<9) != 0 ))
-				prop_list.create_prop_entry('bool', 'AlwaysLightMap', int( surface.flags & (1<<10) != 0 ))
-				prop_list.create_prop_entry('bool', 'DirectionalLight', int( surface.flags & (1<<11) != 0 ))
-				prop_list.create_prop_entry('bool', 'Portal', int( surface.flags & (1<<13) != 0 ))
+				prop_list.create_prop_entry('bool', 'Solid', int( use_flags & (1<<0) != 0 ))
+				prop_list.create_prop_entry('bool', 'Nonexistant', int( use_flags & (1<<1) != 0 ))
+				prop_list.create_prop_entry('bool', 'Invisible', int(use_invisible))
+				prop_list.create_prop_entry('bool', 'Translucent', int( use_flags & (1<<3) != 0 ))
+				prop_list.create_prop_entry('bool', 'SkyPortal', int( use_flags & (1<<4) != 0 ))
+				prop_list.create_prop_entry('bool', 'FullyBright', int( use_flags & (1<<5) != 0 ))
+				prop_list.create_prop_entry('bool', 'FlatShade', int( use_flags & (1<<6) != 0 ))
+				prop_list.create_prop_entry('bool', 'GouraudShade', int( use_flags & (1<<12) != 0 ))
+				prop_list.create_prop_entry('bool', 'LightMap', int( use_flags & (1<<7) != 0 ))
+				prop_list.create_prop_entry('bool', 'Subdivide', int( use_flags_and & (1<<8) == 0 )) # AND, dann invert
+				prop_list.create_prop_entry('bool', 'HullMaker', int( use_flags & (1<<9) != 0 ))
+				prop_list.create_prop_entry('bool', 'AlwaysLightMap', int( use_flags & (1<<10) != 0 ))
+				prop_list.create_prop_entry('bool', 'DirectionalLight', int( use_flags & (1<<11) != 0 ))
+				prop_list.create_prop_entry('bool', 'Portal', int( use_flags & (1<<13) != 0 ))
 				prop_list.create_prop_entry('bool', 'NoSnap', ( 1 ))
-				prop_list.create_prop_entry('bool', 'SkyPan', int( surface.flags & (1<<15) != 0 ))
-				prop_list.create_prop_entry('bool', 'Additive', int( surface.flags & (1<<19) != 0 ))
-				prop_list.create_prop_entry('bool', 'TerrainOccluder', int( surface.flags & (1<<18) != 0 ))
-				prop_list.create_prop_entry('bool', 'TimeOfDay', int( surface.flags & (1<<20) != 0 ))
-				prop_list.create_prop_entry('bool', 'VisBlocker', int( surface.flags & (1<<21) != 0 ))
-				prop_list.create_prop_entry('bool', 'NotAStep', int( surface.flags & (1<<22) != 0 ))
-				#prop_list.create_prop_entry('bool', 'NoWallWalk', int( surface.flags & (1<<23) != 0 ))
-				#prop_list.create_prop_entry('bool', 'BlockLight', int( surface.flags & (1<<24) == 0 ))
-				# var block_light = int(surface.flags & (1 << 30) != 0)
-				# prop_list.create_prop_entry('bool', 'BlockLight', block_light)
+				prop_list.create_prop_entry('bool', 'SkyPan', int( use_flags & (1<<15) != 0 ))
+				prop_list.create_prop_entry('bool', 'Additive', int( use_flags & (1<<19) != 0 ))
+				prop_list.create_prop_entry('bool', 'TerrainOccluder', int( use_flags & (1<<18) != 0 ))
+				prop_list.create_prop_entry('bool', 'TimeOfDay', int( use_flags & (1<<20) != 0 ))
+				prop_list.create_prop_entry('bool', 'VisBlocker', int( use_flags & (1<<21) != 0 ))
+				prop_list.create_prop_entry('bool', 'NotAStep', int( use_flags & (1<<22) != 0 ))
 
-				prop_list.create_prop_entry('longint', 'DetailLevel', surface.detail_level)
-				#prop_list.create_prop_entry('longint', 'DetailLevel', 0)
-				#prop_list.create_prop_entry('string', 'Effect', '')
-				#prop_list.create_prop_entry('string', 'EffectParam', '')
-				if surface.use_effects == 1:
-					prop_list.create_prop_entry('string', 'Effect', surface.effect_name)
-					prop_list.create_prop_entry('string', 'EffectParam', surface.effect_param)
+				prop_list.create_prop_entry('longint', 'DetailLevel', use_detail)
+				if use_effects:
+					prop_list.create_prop_entry('string', 'Effect', use_effect_name)
+					prop_list.create_prop_entry('string', 'EffectParam', use_effect_param)
 				else:
 					prop_list.create_prop_entry('string', 'Effect', null)
 					prop_list.create_prop_entry('string', 'EffectParam', null)
